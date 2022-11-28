@@ -4,3 +4,9 @@ tqdm
 librosa
 Fire
 python-dotenv
+
+psutil
+ipython
+flask
+better_exchook
+git+https://github.com/rwth-i6/sisyphus.git

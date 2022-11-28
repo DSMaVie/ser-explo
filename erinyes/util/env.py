@@ -10,6 +10,7 @@ class Env:
     DATA_DIR: Path
 
 
-def setup():
-    str_envs = dotenv_values(find_dotenv())
-    return Env(**{k: Path(v) for k, v in str_envs.items()})
+    @classmethod
+    def load(cls):
+        str_envs = dotenv_values(find_dotenv())
+        return cls(**{k: Path(v) for k, v in str_envs.items()})
