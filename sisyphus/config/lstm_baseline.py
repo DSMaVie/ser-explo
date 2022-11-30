@@ -9,7 +9,6 @@ def run_lstm_baseline():
     for dataset in Dataset:
         if dataset != Dataset.RAV:
             continue
-        print(dataset, type(dataset))
 
         pp_job = PreprocessingJob(dataset=dataset)
         tk.register_output(f"{EXPERIMENT_NAME}/{dataset.name}/results", pp_job.out_pth)

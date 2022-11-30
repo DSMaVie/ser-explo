@@ -8,3 +8,8 @@ class Dataset(Enum):
     MOS = auto()
     SWBD = auto()
     IEM = auto()
+
+
+class LabelCategory(Enum):
+    EMOTION = auto()
+    SENTIMENT = auto()

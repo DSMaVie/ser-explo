@@ -6,7 +6,7 @@ import pandas as pd
 from fire import Fire
 
 from erinyes.preprocess.preprocessor import PreProcessor
-from erinyes.preprocess.steps import normalize_emotions
+from erinyes.preprocess.steps import normalize_labels
 
 
 def main(data_dir: str):
@@ -14,7 +14,7 @@ def main(data_dir: str):
 
     manifest = pd.read_csv(DATA_DIR / "manifest.csv")
 
-    pp = PreProcessor([normalize_emotions])
+    pp = PreProcessor([normalize_labels])
     pp.run(manifest)
 
 

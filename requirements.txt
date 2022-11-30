@@ -4,9 +4,11 @@ tqdm
 librosa
 Fire
 python-dotenv
+nltk
 
 psutil
 ipython
 flask
 better_exchook
+
 pytest

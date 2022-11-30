@@ -7,7 +7,8 @@ from dotenv import dotenv_values, find_dotenv
 @dataclass
 class Env:
     ROOT_DIR: Path
-    DATA_DIR: Path
+    RAW_DIR: Path
+    MODEL_DIR: Path
 
 
     @classmethod
