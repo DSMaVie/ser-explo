@@ -9,3 +9,4 @@ def normalize_emotions(data: pd.DataFrame) -> pd.DataFrame:
         data.iterrows(), desc="⤷ Normalizing Emotions", leave=False, total=len(data)
     ):
         sleep(0.005)
+    return data
