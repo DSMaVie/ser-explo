@@ -4,7 +4,8 @@ tqdm
 librosa
 Fire
 python-dotenv
-nltk
+pyyaml
+h5py
 
 psutil
 ipython

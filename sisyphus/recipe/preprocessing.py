@@ -1,47 +1,61 @@
-
+import logging
+import pickle
 from pathlib import Path
 
 import pandas as pd
 
-from erinyes.preprocess.preprocessor import PreProcessor
-from erinyes.preprocess.steps import EmotionFilter, LabelNormalizer
-from erinyes.util.enums import Dataset
+from erinyes.preprocess.base import PreproInstructionSet
+from erinyes.preprocess.serialization import serialize_preprocessed_data
 from erinyes.util.env import Env
 from sisyphus import Job, Task
 
+logger = logging.getLogger(__name__)
+
 
 class PreprocessingJob(Job):
-    def __init__(self, dataset: Dataset) -> None:
-        self.dataset = dataset
-        self.out_pth = self.output_path(f"{self.dataset.name}_processed.csv")
+    def __init__(self, pth_to_instructions: Path) -> None:
+        logger.info(f"loading instructions from {pth_to_instructions}")
+        self.instructions = PreproInstructionSet.from_yaml(pth_to_instructions)
+
+        self.out_pth = self.output_path(self.instructions.src.name, directory=True)
+
+    def process_manifest(self):
+        manifest_pth = (
+            Env.load().RAW_DIR / self.instructions.src.name.lower() / "manifest.csv"
+        )
+        logger.info(f"loading manifest from {manifest_pth}")
+        manifest = pd.read_csv(manifest_pth)
+
+        for step in self.instructions.steps:
+            logger.info(f"executing step: {step.name} ...")
+            manifest = step.func(manifest)
+
+        logger.info(f"serializing manifest ...")
+        out_pth = Path(self.out_pth.get_path())
+        manifest.to_csv(out_pth / "manifest.csv", index=False)
+
+    def finalize(self):
+        out_pth = Path(self.out_pth.get_path())
+
+        logger.info(f"serializing feature_extractor ...")
+        fe = self.instructions.feature_extractor
+        with (out_pth / "feature_extractor.pkl").open("wb") as file:
+            pickle.dump(fe, file)
+
+        logger.info(f"serializing label_encodec ...")
+        le = self.instructions.label_encodec
+        with (out_pth / "label_encoder.pkl").open("wb") as file:
+            pickle.dump(le, file)
+
+        logger.info(f"serializing data for quick access ...")
+        serialize_preprocessed_data(
+            out_pth,
+            src_path=Env.load().RAW_DIR / self.instructions.src.name.lower(),
+            feature_extractor=fe,
+            label_encodec=le,
+            target_col=self.instructions.label_target,
+        )
 
     def tasks(self):
-        yield Task("run")
-
-    def run(self):
-        env = Env.load()
-
-        DATA_DIR = Path(env.RAW_DIR / self.dataset.name.lower())
-
-        manifest = pd.read_csv(DATA_DIR / "manifest.csv.gz")
-
-        # steps
-        norm = LabelNormalizer(dataset=self.dataset)
-        filt = EmotionFilter(dataset=self.dataset)
-        # run
-        pp = PreProcessor([norm.normalize_dataframe, filt.filter_dataframe])
-        manifest = pp.run(manifest)
-
-        manifest.to_csv(self.out_pth.get_path())
-
-
-
-# pp as factory for steps.
-#  * steps can be encapsulated as single tasks.
-# gather code for entire pp
-#  * more steps
-#  * more dsets
-# link outputs to datadir
-# document ideas
-#   * sis alias
-#
+        yield Task("process_manifest")
+        yield Task("finalize")

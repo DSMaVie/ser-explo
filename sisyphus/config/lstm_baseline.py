@@ -1,15 +1,14 @@
 from recipe.preprocessing import PreprocessingJob
 
-from erinyes.util.enums import Dataset
+from erinyes.util.env import Env
 from sisyphus import tk
 
 EXPERIMENT_NAME = "lstm_baseline"
 
 def run_lstm_baseline():
-    for dataset in Dataset:
-        if dataset != Dataset.RAV:
-            continue
-
-        pp_job = PreprocessingJob(dataset=dataset)
-        tk.register_output(f"{EXPERIMENT_NAME}/{dataset.name}/results", pp_job.out_pth)
+    env = Env.load()
+    for pth in env.RAW_DIR.rglob("*.yaml"):
+        print(pth)
+        pp_job = PreprocessingJob(pth)
+        tk.register_output(f"{EXPERIMENT_NAME}/pp/{pth.stem}", pp_job.out_pth)
         return pp_job.out_pth

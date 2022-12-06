@@ -12,3 +12,13 @@ pip install -e .
 ```
 
 might need an addtional installation of ffmpeg/libsndfile.
+
+you need to install sisyphus
+## Next Steps
+* pp
+  * swbd
+  * mos
+  * iem
+  * recipes somewhere safe (data/_instructions?)
+* trainer
+* testing
