@@ -1,0 +1,26 @@
+src: SWBD
+steps:
+    - name: normalize_labels
+      args:
+        target: &target_col Sentiment
+    - name: filter_emotions
+      args:
+        keep: &ekman
+        - Happiness
+        - Anger
+        - Sadness
+        - Fear
+        - Disgust
+        - Surprise
+    - name: produce_conditional_splits
+      args:
+        src_col: Actor
+        train: 1..18
+        val: 19
+        test: 20,21,22,23,24
+features:
+    name: logmelspec
+labels:
+    classes: *ekman
+    NofN: False
+    target: *target_col
