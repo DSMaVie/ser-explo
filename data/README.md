@@ -5,20 +5,15 @@ Subfolders:
 * instructions -> tracked
 * models -> symlinked
 
-## normalized Emotion Classes per Dataset
-| RAV | IEM | MOS | SWBD |
-|---|---|---|---|
-| Happiness | Happiness | Happiness  | |
-| Sadness | Sadness | Sadness | |
-| Anger | Anger | Anger | |
-| Fear | Excitement | Fear | |
-| Surprise | Frustration | Surprise | |
-| Disgust | | Disgust | |
-| *No Emotion* | *No Emotion* | *No Emotion* | |
-|--|
-|||Positive|Positive|
-|||Negative|Negative|
-|||Neutral|Neutral|
+## Raw Data Sources
+
+* [RAV](https://zenodo.org/record/1188976#.Y5CRp-zMLDU): Download the speech data for Actor 01-24
+* SWBD: Data under licence of LDC, located internally. Split info received via mail, saved in the download package.
+  [Speaker Stats](https://isip.piconepress.com/projects/switchboard/doc/statistics/ws97_speaker_stats.text)
+  are not provided by default, but saved in the internal dl package as well.
+* [MOS](http://immortal.multicomp.cs.cmu.edu/raw_datasets/): Link is dead (as of Dec22). [Split info](https://github.com/A2Zadeh/CMU-MultimodalSDK/blob/master/mmsdk/mmdatasdk/dataset/standard_datasets/CMU_MOSEI/cmu_mosei_std_folds.py) is saved in a python file with  arrays.
+* IEM: Data under license, located internally.
+
 
 ## Raw Data Assumptions
 
@@ -43,7 +38,28 @@ structure the data is saved in.
   `train.txt`, `val.txt`,  `test.txt`. In there each row describes the `file_idx` of where each file belongs.
 
 In the `scripts` folder parse scripts for each used corpus can be found. they serve as examples how to get the download
-packages in the aforementioned state. They worked in Dec22
+packages in the aforementioned state. They worked in Dec22.
+
+### normalized Emotion Classes
+
+| RAV | IEM | MOS |
+|---|---|---|
+| Happiness | Happiness | Happiness  |
+| Sadness | Sadness | Sadness |
+| Anger | Anger | Anger |
+| Fear | Excitement | Fear |
+| Surprise | Frustration | Surprise |
+| Disgust | | Disgust |
+| *No Emotion* | *No Emotion* | *No Emotion* |
+
+### normalized Sentiment Labels
+
+| MOS | SWBD |
+|---|---|
+|Positive|Positive|
+|Negative|Negative|
+|Neutral|Neutral|
+
 
 ## Instructions
 

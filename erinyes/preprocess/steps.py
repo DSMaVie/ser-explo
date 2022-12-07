@@ -143,7 +143,77 @@ class ConditionalSplitter:
         return data
 
 
+class AgreementConsolidator:
+    def __init__(
+        self,
+        target: str,
+        target_confounder: str | list[str],
+        idx_confounder: str | list[str],
+    ) -> None:
+        self.target = target
+        self.idx_comp = (
+            idx_confounder if isinstance(idx_confounder, list) else [idx_confounder]
+        )
+        self.target_comp = (
+            target_confounder
+            if isinstance(target_confounder, list)
+            else [target_confounder]
+        )
+
+    @staticmethod
+    def agreement(values: list):
+        # determine vote and number of voters for that
+        uniques = np.unique(values, return_counts=True)
+        uniques = sorted(zip(*uniques), key=lambda x: x[1], reverse=True)
+        vote, count = uniques[0]
+
+        # determine clearity of winning vote
+        if len(uniques) > 2:
+            clear_winner = count > uniques[1][1]
+        else:
+            clear_winner = True
+
+        # return vals
+        if clear_winner:
+            return vote
+        return None
+
+    def run(self, data: pd.DataFrame) -> pd.DataFrame:
+        idx_cols = [col for col in data.columns if "idx" in col]
+        grouped_df = data.groupby(by=idx_cols)
+        new_df_records = []
+        for name, group in tqdm(
+            grouped_df,
+            desc="calculating agreement between raters",
+            total=grouped_df.ngroups,
+        ):
+            vote = self.agreement(group[self.target].values)
+            if not vote:
+                continue  # agreement could not be reached
+            rows_of_vote = group.query(f"{self.target} == {vote!r}")
+
+            tcomp_dict = {
+                tcomp: rows_of_vote[tcomp].iloc[0] for tcomp in self.target_comp
+            }  # picks first if indistigushable
+            key_dict = dict(zip(idx_cols, name))
+            keycomp_dict = {kcomp: group.iloc[0][kcomp] for kcomp in self.idx_comp}
+
+            new_df_records.append(
+                {self.target: vote, **tcomp_dict, **key_dict, **keycomp_dict}
+            )
+
+        return pd.DataFrame.from_records(new_df_records)
+
+# splits for swbd
+# fix ravdess
+# iem
+# mos
+#   emotion
+#   sentiment
+
+
 class PreproFuncs(Enum):
     normalize_labels = LabelNormalizer
     filter_emotions = EmotionFilterNFold
     produce_conditional_splits = ConditionalSplitter
+    consolidate_per_agreement = AgreementConsolidator

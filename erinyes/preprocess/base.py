@@ -4,32 +4,23 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-import h5py
 import pandas as pd
 import yaml
-from tqdm import tqdm
 
 from erinyes.features import FeatureExtractor, FeatureExtractors
 from erinyes.labels import LabelEncodec
 from erinyes.preprocess.steps import PreproFuncs
 from erinyes.util.enums import Dataset
-from erinyes.util.env import Env
 
 
+@dataclass
 class PreproInstructionSet:
-    def __init__(
-        self,
-        src: Dataset,
-        steps: list[PreproStep],
-        feature_extractor: FeatureExtractor,
-        label_encodec: LabelEncodec,
-        label_target: str,
-    ) -> None:
-        self.src = src
-        self.steps = steps
-        self.feature_extractor = feature_extractor
-        self.label_encodec = label_encodec
-        self.label_target = label_target
+    src: Dataset
+    name: str
+    steps: list[PreproStep]
+    feature_extractor: FeatureExtractor
+    label_encodec: LabelEncodec
+    label_target: str
 
     @classmethod
     def from_yaml(cls, pth_to_instructions: Path):
@@ -74,11 +65,13 @@ class PreproInstructionSet:
 
         return cls(
             src=src,
+            name=pth_to_instructions.stem,
             steps=steps,
             feature_extractor=feature_extractor,
             label_encodec=label_encodec,
             label_target=label_target,
         )
+
 
 @dataclass
 class PreproStep:

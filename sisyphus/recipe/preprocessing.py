@@ -7,13 +7,16 @@ import pandas as pd
 from erinyes.preprocess.base import PreproInstructionSet
 from erinyes.preprocess.serialization import serialize_preprocessed_data
 from erinyes.util.env import Env
-from sisyphus import Job, Task
+from sisyphus import Job, Task, tk
 
 logger = logging.getLogger(__name__)
 
 
 class PreprocessingJob(Job):
-    def __init__(self, pth_to_instructions: Path) -> None:
+    def __init__(self, pth_to_instructions: tk.Path) -> None:
+        # parse to pathlib
+        pth_to_instructions = Path(pth_to_instructions.get_path())
+        
         logger.info(f"loading instructions from {pth_to_instructions}")
         self.instructions = PreproInstructionSet.from_yaml(pth_to_instructions)
 

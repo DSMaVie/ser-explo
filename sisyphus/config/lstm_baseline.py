@@ -1,3 +1,5 @@
+import logging
+
 from recipe.preprocessing import PreprocessingJob
 
 from erinyes.util.env import Env
@@ -5,10 +7,16 @@ from sisyphus import tk
 
 EXPERIMENT_NAME = "lstm_baseline"
 
+logger = logging.getLogger(__name__)
+
 def run_lstm_baseline():
-    env = Env.load()
-    for pth in env.RAW_DIR.rglob("*.yaml"):
-        print(pth)
-        pp_job = PreprocessingJob(pth)
+    inst_dir = Env.load().ROOT_DIR / "data" / "instructions"
+    outs = []
+    for pth in inst_dir.rglob("*.yaml"):
+        pp_job = PreprocessingJob(tk.Path(str(pth)))
         tk.register_output(f"{EXPERIMENT_NAME}/pp/{pth.stem}", pp_job.out_pth)
-        return pp_job.out_pth
+        print(pp_job.out_pth)
+        outs.append(pp_job.out_pth)
+    return outs
+
+

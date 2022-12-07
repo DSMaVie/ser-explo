@@ -1,0 +1,24 @@
+src: SWBD
+steps:
+    - name: normalize_labels
+      args:
+        target: &target_col Sentiment
+    - name: consolidate_per_agreement
+      args:
+        target: *target_col
+        target_confounder:
+          - Reason
+        idx_confounder:
+          - start
+          - end
+          - Speaker
+          - transcript
+features:
+    name: logmelspec
+labels:
+    classes:
+      - Positive
+      - Neutral
+      - Negative
+    NofN: False
+    target: *target_col
