@@ -130,6 +130,7 @@ dmypy.json
 
 
 # data folder
-data
+data/raw
+data/models
 sisyphus/work
 sisyphus/output
