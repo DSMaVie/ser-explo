@@ -1,18 +1,11 @@
-src: SWBD
+src: MOS
 steps:
-    - name: normalize_labels
+    - name: consolidate_with_average
       args:
         target: &target_col Sentiment
-    - name: consolidate_per_agreement
+    - name: normalize_labels
       args:
         target: *target_col
-        target_confounder:
-          - Reason
-        idx_confounder:
-          - start
-          - end
-          - Speaker
-          - transcript
     - name: produce_splits_based_on_files
       args:
         train: train.txt

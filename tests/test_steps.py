@@ -27,5 +27,5 @@ def test_splitter(rav_data):
 
 def test_agreement(swbd_data):
     agreeer = AgreementConsolidator(target="Sentiment", target_confounder="Reason", idx_confounder=["start", "end", "Speaker", "transcript"])
-    agrred_data = agreeer.run(swbd_data)
-    assert False
+    agreed_data = agreeer.run(swbd_data)
+    assert len(agreed_data) == 50248

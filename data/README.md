@@ -47,10 +47,12 @@ packages in the aforementioned state. They worked in Dec22.
 | Happiness | Happiness | Happiness  |
 | Sadness | Sadness | Sadness |
 | Anger | Anger | Anger |
-| Fear | Excitement | Fear |
-| Surprise | Frustration | Surprise |
-| Disgust | | Disgust |
-| *No Emotion* | *No Emotion* | *No Emotion* |
+| Fear | Excitement\* | Fear |
+| Surprise | Neutral | Surprise |
+| Disgust | | |
+| *No Emotion* | | *No Emotion* |
+
+\* Excitement is often folded into Happiness. We do the same.
 
 ### normalized Sentiment Labels
 

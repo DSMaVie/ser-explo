@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from enum import Enum
 
 import numpy as np
@@ -7,6 +8,10 @@ import pandas as pd
 from tqdm import tqdm
 
 from erinyes.util.enums import Split
+from erinyes.util.env import Env
+from erinyes.util.globals import BASE_SPLIT_FRACTION
+
+logger = logging.getLogger(__name__)
 
 
 class LabelNormalizer:
@@ -38,9 +43,9 @@ class LabelNormalizer:
 
     def __normalize_entry(self, entry: str) -> str | None:
         submap = self.__map[self.target]
-        for keys in submap:
-            if entry in keys:
-                return submap[keys]
+        for keys, value in submap.items():
+            if entry == value or entry in keys:
+                return value
         return None
 
     def run(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -64,6 +69,9 @@ class EmotionFilterNFold:
     ) -> None:
         self.__keep = keep
         self.__fold = fold
+
+        if fold:
+            self.__keep.extend(list(self.__fold.keys()))
 
     def __filter_entry(self, s: str) -> str | None:
         if self.__keep:
@@ -96,6 +104,9 @@ class ConditionalSplitter:
             split = Split[key.upper()]
             vals = self.parse_str_values(val)
             self.splits.update({split: vals})
+
+        if Split.TRAIN not in self.splits:
+            raise ValueError("At least the train split must be set!")
 
     @staticmethod
     def parse_str_values(val: str | int):
@@ -140,6 +151,18 @@ class ConditionalSplitter:
             return None
 
         data["split"] = src_col.progress_apply(__wrap)
+
+        # check for missing split. apply default split fraction
+        for split in Split:
+            if split == Split.TRAIN:
+                continue
+            if split.name.lower() not in data.split:
+                sample = (
+                    data.query("split == 'train'")
+                    .sample(frac=BASE_SPLIT_FRACTION)
+                    .index
+                )
+                data.split.loc[sample] = split.name.lower()
         return data
 
 
@@ -163,6 +186,7 @@ class AgreementConsolidator:
     @staticmethod
     def agreement(values: list):
         # determine vote and number of voters for that
+        logger.info(f"values to aggree on are {values}")
         uniques = np.unique(values, return_counts=True)
         uniques = sorted(zip(*uniques), key=lambda x: x[1], reverse=True)
         vote, count = uniques[0]
@@ -187,6 +211,9 @@ class AgreementConsolidator:
             desc="calculating agreement between raters",
             total=grouped_df.ngroups,
         ):
+            logger.info(
+                f"calculating agreement of group {name} with values {group.to_dict()}"
+            )
             vote = self.agreement(group[self.target].values)
             if not vote:
                 continue  # agreement could not be reached
@@ -204,10 +231,46 @@ class AgreementConsolidator:
 
         return pd.DataFrame.from_records(new_df_records)
 
-# splits for swbd
-# fix ravdess
-# iem
-# mos
+
+class FileSplitter:
+    def __init__(self, **files: str) -> None:
+        self.files = {
+            Split[split.upper()]: next(Env.load().RAW_DIR.rglob(f"*{file}"))
+            for split, file in files.items()
+        }
+        logger.info(f"found files for the splits at {self.files}")
+
+    def read_files(self):
+        maps = {}
+        for split, file in self.files.items():
+            logger.info(f"reading file {file}")
+            with file.open("r") as f:
+                maps.update({tuple(l.split("/")): split for l in f.readlines()})
+
+        return maps
+
+    def run(self, data: pd.DataFrame) -> pd.DataFrame:
+        maps = self.read_files()
+
+        def _retrieve(key: pd.Series | str):
+            key_unpacked = tuple(key.values) if isinstance(key, pd.Series) else key
+
+            map_entry = maps.get(key_unpacked)
+            return map_entry.name.lower() if map_entry else None
+
+        idx_cols = data.filter(like="idx")
+        tqdm.pandas(desc="associating utterances to splits ...")
+        split_col = idx_cols.progress_apply(_retrieve, axis=1)
+
+        logger.info("merging split info back into data.")
+        data["split"] = split_col
+        return data
+
+
+# steps:
+#    consolidate based on average
+# test mos:
+#   parse script
 #   emotion
 #   sentiment
 
@@ -216,4 +279,5 @@ class PreproFuncs(Enum):
     normalize_labels = LabelNormalizer
     filter_emotions = EmotionFilterNFold
     produce_conditional_splits = ConditionalSplitter
+    produce_splits_based_on_files = FileSplitter
     consolidate_per_agreement = AgreementConsolidator

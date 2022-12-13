@@ -25,7 +25,7 @@ class FeatureExtractor(ABC):
             return self.__apply__(audio, sr)
         except:
             print("extract:", pth_to_data, start, duration)
-            raise RuntimeError(f" Extraction failed. file={pth_to_data}, start={start}, dur={duration}")
+            raise RuntimeError(f"Extraction failed. file={pth_to_data}, start={start}, dur={duration}")
 
 
 class LogMelSpec(FeatureExtractor):

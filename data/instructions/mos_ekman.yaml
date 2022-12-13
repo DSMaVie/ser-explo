@@ -1,0 +1,28 @@
+src: MOS
+steps:
+    - name: consolidate_with_average
+      args:
+        target: &classes
+    - name: normalize_labels
+      args:
+        target: &target_col Emotion
+    - name: filter_emotions
+      args:
+        keep: &ekman
+        - Happiness
+        - Anger
+        - Sadness
+        - Fear
+        - Disgust
+        - Surprise
+    - name: produce_splits_based_on_files
+      args:
+        train: train.txt
+        val: val.txt
+        test: test.txt
+features:
+    name: logmelspec
+labels:
+    classes: *ekman
+    NofN: True
+    target: *target_col

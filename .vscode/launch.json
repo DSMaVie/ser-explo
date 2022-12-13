@@ -9,8 +9,8 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "~/Data/LDC/",
-                "~/Data/SER/swbd/"
+                "~/Data/IEMOCAP_full_release/",
+                "~/Data/SER/iem/"
             ]
         }
     ]

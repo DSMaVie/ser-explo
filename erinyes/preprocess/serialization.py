@@ -8,7 +8,6 @@ from tqdm import tqdm
 
 from erinyes.features import FeatureExtractor
 from erinyes.labels import LabelEncodec
-from erinyes.util.env import Env
 
 
 def serialize_preprocessed_data(
@@ -34,14 +33,15 @@ def serialize_preprocessed_data(
                 if "start" in row.index and "end" in row.index
                 else None
             )
+            pth_to_file = next(src_path.rglob(f"*{row.file_idx}.*"))
 
             features = feature_extractor.extract(
-                pth_to_data=src_path / f"{row.file_idx}.wav",
+                pth_to_data=pth_to_file,
                 start=start,
                 duration=duration,
             )
             labels = label_encodec.encode(row[target_col])
 
-            keys = "/".join([row[k] for k in row.index if "idx" in k])
+            keys = "/".join([str(row[k]) for k in row.index if "idx" in k])
             dset = file.create_dataset(f"{row.split}/{keys}", data=features)
             dset.attrs["label"] = labels
