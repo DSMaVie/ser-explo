@@ -3,8 +3,7 @@ from enum import Enum, auto
 
 class Dataset(Enum):
     RAV = auto()
-    MOS_EMOTION = auto()
-    MOS_SENTIMENT = auto()
+    MOS = auto()
     SWBD = auto()
     IEM = auto()
 

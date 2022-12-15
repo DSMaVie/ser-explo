@@ -14,7 +14,7 @@ from erinyes.util.enums import Dataset
 
 
 @dataclass
-class PreproInstructionSet:
+class PreproInstructions:
     src: Dataset
     name: str
     steps: list[PreproStep]

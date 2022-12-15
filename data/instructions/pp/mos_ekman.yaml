@@ -2,19 +2,19 @@ src: MOS
 steps:
     - name: consolidate_with_average
       args:
-        classes: *ekman
-    - name: normalize_labels
-      args:
-        target: &target_col Emotion
-    - name: filter_emotions
-      args:
-        keep: &ekman
+        classes: &ekman
         - Happiness
         - Anger
         - Sadness
         - Fear
         - Disgust
         - Surprise
+    - name: normalize_labels
+      args:
+        target: &target_col Emotion
+    - name: filter_emotions
+      args:
+        keep: *ekman
     - name: produce_splits_based_on_files
       args:
         train: train.txt

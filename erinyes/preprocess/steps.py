@@ -290,28 +290,30 @@ class AverageConsolidator:
         return self.classes[cls_idx]
 
     def run(self, data: pd.DataFrame) -> pd.DataFrame:
+        # identify indices
+        idx_cols = [col for col in data.columns if "idx" in col]
+
+        # identify averages
+        avg_results = data.groupby(by=idx_cols).mean()[self.target]
+        tqdm.pandas(desc="compounding based on rater average.", total=len(avg_results))
+        compound_fn = (
+            self._compound_NofN
+            if self.mode == "Emotion"
+            else self._compound_single_target
+        )
+
+        # identify rest of data merge and return
         data_trunc = data.set_index(idx_cols).drop(
             columns=[
                 col for col in data.columns if col in self.target or col in self.classes
             ]
         )
-
-        idx_cols = [col for col in data.columns if "idx" in col]
-        avg_results = data.groupby(by=idx_cols).mean()[self.target]
-
-        tqdm.pandas(desc="compounding based on rater average.", total=len(avg_results))
-        compound_fn = (
-            self._compound_NofN
-            if isinstance(avg_results, pd.DataFrame)
-            else self._compound_single_target
-        )
+        data_trunc = data_trunc.groupby(by=idx_cols).first()
         data_trunc[self.mode] = avg_results.progress_apply(compound_fn)
         return data_trunc.reset_index()
 
-# steps:
-#    consolidate based on average
+
 # test mos:
-#   parse script
 #   emotion
 #   sentiment
 
@@ -322,4 +324,4 @@ class PreproFuncs(Enum):
     produce_conditional_splits = ConditionalSplitter
     produce_splits_based_on_files = FileSplitter
     consolidate_per_agreement = AgreementConsolidator
-    consolidate_with_agreement = AverageConsolidator
+    consolidate_with_average = AverageConsolidator
