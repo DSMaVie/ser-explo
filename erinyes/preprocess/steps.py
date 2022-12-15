@@ -270,12 +270,12 @@ class FileSplitter:
 class AverageConsolidator:
     def __init__(self, classes: list[str]) -> None:
         if len(classes) == 6:
-            self.target = classes
+            self.target = np.array(classes)
             self.mode = "Emotion"
-            self.classes = classes
+            self.classes = np.array(classes)
         elif len(classes) == 3:
             self.target = self.mode = "Sentiment"
-            self.classes = classes
+            self.classes = np.array(classes)
         else:
             raise ValueError("Only proper MOS classes allowed!")
 
@@ -296,11 +296,10 @@ class AverageConsolidator:
         # identify averages
         avg_results = data.groupby(by=idx_cols).mean()[self.target]
         tqdm.pandas(desc="compounding based on rater average.", total=len(avg_results))
-        compound_fn = (
-            self._compound_NofN
-            if self.mode == "Emotion"
-            else self._compound_single_target
-        )
+        if self.mode == "Emotion":
+            result = avg_results.progress_apply(self._compound_NofN, axis=1)
+        else:
+            result = avg_results.progress_apply(self._compound_single_target)
 
         # identify rest of data merge and return
         data_trunc = data.set_index(idx_cols).drop(
@@ -309,13 +308,10 @@ class AverageConsolidator:
             ]
         )
         data_trunc = data_trunc.groupby(by=idx_cols).first()
-        data_trunc[self.mode] = avg_results.progress_apply(compound_fn)
+        data_trunc[self.mode] = result
         return data_trunc.reset_index()
 
 
-# test mos:
-#   emotion
-#   sentiment
 
 
 class PreproFuncs(Enum):
