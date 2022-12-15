@@ -2,7 +2,7 @@ src: MOS
 steps:
     - name: consolidate_with_average
       args:
-        target: &classes
+        classes: *ekman
     - name: normalize_labels
       args:
         target: &target_col Emotion

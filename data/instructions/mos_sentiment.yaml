@@ -2,10 +2,10 @@ src: MOS
 steps:
     - name: consolidate_with_average
       args:
-        target: &target_col Sentiment
+        classes: *classes
     - name: normalize_labels
       args:
-        target: *target_col
+        target: &target_col Sentiment
     - name: produce_splits_based_on_files
       args:
         train: train.txt
@@ -15,9 +15,9 @@ steps:
 features:
     name: logmelspec
 labels:
-    classes:
-      - Positive
-      - Neutral
+    classes: &classes
       - Negative
+      - Neutral
+      - Positive
     NofN: False
     target: *target_col

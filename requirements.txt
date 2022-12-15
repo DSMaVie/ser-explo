@@ -6,6 +6,7 @@ Fire
 python-dotenv
 pyyaml
 h5py
+torch
 
 psutil
 ipython
@@ -13,3 +14,4 @@ flask
 better_exchook
 
 pytest
+black

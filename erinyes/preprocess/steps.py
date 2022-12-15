@@ -267,6 +267,47 @@ class FileSplitter:
         return data
 
 
+class AverageConsolidator:
+    def __init__(self, classes: list[str]) -> None:
+        if len(classes) == 6:
+            self.target = classes
+            self.mode = "Emotion"
+            self.classes = classes
+        elif len(classes) == 3:
+            self.target = self.mode = "Sentiment"
+            self.classes = classes
+        else:
+            raise ValueError("Only proper MOS classes allowed!")
+
+    def _compound_NofN(self, row: pd.Series) -> str:
+        avg_results = [res > 0 for res in row.values]
+        avg_results = self.classes[avg_results]
+        return ".".join(avg_results)
+
+    def _compound_single_target(self, value: float) -> str:
+        cls_idx = 0 if -1 < value < 1 else 1
+        cls_idx = int(np.sign(value) * cls_idx + 1)  # to fix range to cls_idx
+        return self.classes[cls_idx]
+
+    def run(self, data: pd.DataFrame) -> pd.DataFrame:
+        data_trunc = data.set_index(idx_cols).drop(
+            columns=[
+                col for col in data.columns if col in self.target or col in self.classes
+            ]
+        )
+
+        idx_cols = [col for col in data.columns if "idx" in col]
+        avg_results = data.groupby(by=idx_cols).mean()[self.target]
+
+        tqdm.pandas(desc="compounding based on rater average.", total=len(avg_results))
+        compound_fn = (
+            self._compound_NofN
+            if isinstance(avg_results, pd.DataFrame)
+            else self._compound_single_target
+        )
+        data_trunc[self.mode] = avg_results.progress_apply(compound_fn)
+        return data_trunc.reset_index()
+
 # steps:
 #    consolidate based on average
 # test mos:
@@ -281,3 +322,4 @@ class PreproFuncs(Enum):
     produce_conditional_splits = ConditionalSplitter
     produce_splits_based_on_files = FileSplitter
     consolidate_per_agreement = AgreementConsolidator
+    consolidate_with_agreement = AverageConsolidator

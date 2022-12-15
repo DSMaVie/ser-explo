@@ -1,3 +1,4 @@
+""" untested script as the orignal data folder is no longer available. it is now hidden behind some form of registration.  """
 import shutil
 import urllib.request
 from pathlib import Path
