@@ -10,6 +10,7 @@ class Env:
     ROOT_DIR: Path
     RAW_DIR: Path
     MODEL_DIR: Path
+    INST_DIR: Path
 
     @classmethod
     @lru_cache(maxsize=None)
