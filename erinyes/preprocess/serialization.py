@@ -6,8 +6,8 @@ import h5py
 import pandas as pd
 from tqdm import tqdm
 
-from erinyes.features import FeatureExtractor
-from erinyes.labels import LabelEncodec
+from erinyes.data.features import FeatureExtractor
+from erinyes.data.labels import LabelEncodec
 
 
 def serialize_preprocessed_data(

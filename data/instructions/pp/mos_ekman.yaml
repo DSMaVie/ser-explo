@@ -22,6 +22,8 @@ steps:
         test: test.txt
 features:
     name: logmelspec
+    args:
+      n_mels: 23
 labels:
     classes: *ekman
     NofN: True

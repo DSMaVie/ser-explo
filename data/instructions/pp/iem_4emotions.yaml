@@ -20,6 +20,8 @@ steps:
 
 features:
     name: logmelspec
+    args:
+      n_mels: 23
 labels:
     classes: *target_classes
     NofN: False

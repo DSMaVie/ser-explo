@@ -41,3 +41,9 @@ class LabelEncodec:
             return ".".join(str_list)
 
         return self.__int2str(label)
+
+    def get_class_dim(self):
+        return len(self.classes)
+
+    def get_is_mhe(self):
+        return self.NofN

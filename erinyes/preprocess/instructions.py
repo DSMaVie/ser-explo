@@ -7,8 +7,8 @@ from typing import Callable
 import pandas as pd
 import yaml
 
-from erinyes.features import FeatureExtractor, FeatureExtractors
-from erinyes.labels import LabelEncodec
+from erinyes.data.features import FeatureExtractor, FeatureExtractors
+from erinyes.data.labels import LabelEncodec
 from erinyes.preprocess.steps import PreproFuncs
 from erinyes.util.enums import Dataset
 

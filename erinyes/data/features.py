@@ -15,6 +15,10 @@ class FeatureExtractor(ABC):
     def __apply__(self, signal: np.ndarray, sr: int) -> np.ndarray:
         """should be overloaded"""
 
+    @abstractmethod
+    def get_feature_dim(self):
+        """ retrieve the number of features per time step from the extractor."""
+
     def extract(
         self, pth_to_data: Path, start: float = 0, duration: float = None
     ) -> np.ndarray:
@@ -31,6 +35,9 @@ class FeatureExtractor(ABC):
 class LogMelSpec(FeatureExtractor):
     def __apply__(self, signal: np.ndarray, sr: int) -> np.ndarray:
         return librosa.feature.melspectrogram(y=signal, sr=sr, **self.additional_args)
+
+    def get_feature_dim(self):
+        return self.additional_args["n_mels"]
 
 
 class FeatureExtractors(Enum):
