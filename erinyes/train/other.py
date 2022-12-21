@@ -10,4 +10,4 @@ class Optimizer(Enum):
 
 class LossFn(Enum):
     binary_ce = BCELoss
-    mhe_ce = CrossEntropyLoss
+    mc_ce = CrossEntropyLoss

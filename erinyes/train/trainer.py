@@ -34,7 +34,8 @@ class Trainer:
         optimizer: OptimizerType,
         save_pth: Path,
         model: nn.Module | None = None,
-        train_data: DataLoader | None = None
+        train_data: DataLoader | None = None,
+        gpu_available: bool = False,
         # after_epoch: Callable[[int, torch.TensorType]],
         # after_update: Callable[[int, list[torch.TensorType]]],
     ):
@@ -49,6 +50,7 @@ class Trainer:
         self.completed_epochs = 0
         self.completed_batches = 0
         self._model_cls = model.__class__ if model else None
+        self._train_device = "cuda" if gpu_available else "cpu"
 
     def fit(self):
         if self.completed_epochs == self.max_epochs:
@@ -57,6 +59,8 @@ class Trainer:
         if not self.model or not self.train_data:
             raise AttributeError("Either Model or Train_Data has not been set prior!")
 
+        self.model.train()
+        self.model.to(device=self._train_device)
         for epoch_idx in tqdm(
             range(self.completed_epochs + 1, self.max_epochs),
             desc="Epoch",
@@ -68,9 +72,12 @@ class Trainer:
                 enumerate(self.train_data, start=self.completed_batches + 1),
                 desc="Current Batch in Epoch",
             ):
+                x = x.to(self._train_device)
+                y = y.to(self._train_device)
+
                 # calc model output and loss
                 pred = self.model(x)
-                loss = self.loss_fn(pred, y)
+                loss = self.loss_fn(pred, y.long())
 
                 # optimize
                 loss.backward()

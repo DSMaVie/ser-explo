@@ -105,7 +105,7 @@ class TrainingsInstructions:
         model_params: Iterator[nn.Parameter], train_args: yamlDict, is_mhe: bool = False
     ) -> Trainer:
         loss = LossFn[
-            f"{'mhe' if is_mhe else 'binary'}_{train_args['loss']}"
+            f"{'binary' if is_mhe else 'mc'}_{train_args['loss']}"
         ].value()  # TODO: make args addable
         opti = Optimizer[train_args["optimizer"]].value(
             model_params
