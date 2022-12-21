@@ -17,9 +17,9 @@ steps:
         keep: *ekman
     - name: produce_splits_based_on_files
       args:
-        train: train.txt
-        val: val.txt
-        test: test.txt
+        train: mos/train.txt
+        val: mos/val.txt
+        test: mos/test.txt
 features:
     name: logmelspec
     args:

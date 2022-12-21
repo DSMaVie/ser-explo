@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import logging
 import pickle
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Iterator
 
 import yaml
 from torch import nn
@@ -18,6 +19,8 @@ from erinyes.train.trainer import Trainer
 from erinyes.util.enums import Split
 from erinyes.util.env import Env
 from erinyes.util.types import yamlDict
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -59,7 +62,7 @@ class TrainingsInstructions:
         )
 
         trainer_factory = cls._get_trainer_factory(
-            train_args=train_data, is_mhe=label_encodec.get_is_mhe()
+            model.parameters(), train_args=train_data, is_mhe=label_encodec.get_is_mhe()
         )
 
         return cls(model=model, data=dataloader, trainer_factory=trainer_factory)
@@ -73,7 +76,8 @@ class TrainingsInstructions:
         other_arch_data: yamlDict,
     ) -> nn.Module:
 
-        return Models[model_name](
+        model_inst = Models[model_name].value
+        return model_inst(
             input_feature_dim=in_dim, class_dim=out_dim, mhe=is_mhe, **other_arch_data
         )
 
@@ -85,6 +89,7 @@ class TrainingsInstructions:
         gpu_available: bool = False,
     ):
         dataset = Hdf5Dataset(pp_path / "processed_data.h5", split=Split.TRAIN)
+        logger.info(f"found {len(dataset.get_indices())} examples in the train set")
         sampler = SubsetRandomSampler(dataset.get_indices())
         return DataLoader(
             dataset,
@@ -96,11 +101,15 @@ class TrainingsInstructions:
         )
 
     @staticmethod
-    def _get_trainer_factory(train_args: yamlDict, is_mhe: bool = False) -> Trainer:
+    def _get_trainer_factory(
+        model_params: Iterator[nn.Parameter], train_args: yamlDict, is_mhe: bool = False
+    ) -> Trainer:
         loss = LossFn[
             f"{'mhe' if is_mhe else 'binary'}_{train_args['loss']}"
-        ]()  # TODO: make args addable
-        opti = Optimizer[train_args["optimizer"]]()  # TODO: make args addable
+        ].value()  # TODO: make args addable
+        opti = Optimizer[train_args["optimizer"]].value(
+            model_params
+        )  # TODO: make args addable
         return partial(
             Trainer, max_epochs=train_args["max_epochs"], loss_fn=loss, optimizer=opti
         )

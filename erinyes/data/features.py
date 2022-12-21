@@ -34,7 +34,8 @@ class FeatureExtractor(ABC):
 
 class LogMelSpec(FeatureExtractor):
     def __apply__(self, signal: np.ndarray, sr: int) -> np.ndarray:
-        return librosa.feature.melspectrogram(y=signal, sr=sr, **self.additional_args)
+        """ output shape is TxF"""
+        return librosa.feature.melspectrogram(y=signal, sr=sr, **self.additional_args).T
 
     def get_feature_dim(self):
         return self.additional_args["n_mels"]

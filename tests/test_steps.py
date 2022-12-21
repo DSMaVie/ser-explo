@@ -1,7 +1,11 @@
+import numpy as np
 import pandas as pd
 import pytest
 
-from erinyes.preprocess.steps import AgreementConsolidator, ConditionalSplitter, AverageConsolidator
+from erinyes.preprocess.steps import (AgreementConsolidator,
+                                      AverageConsolidator, ConditionalSplitter,
+                                      FileSplitter)
+from erinyes.util.enums import Split
 from erinyes.util.env import Env
 
 
@@ -28,6 +32,25 @@ def test_splitter(rav_data):
     )
     data = splitter.run(rav_data)
     assert "split" in data.columns
+
+def test_file_splitter_swbd(swbd_data):
+    file_args = {s.name.lower(): f"swbd/{s.name.lower()}.txt" for s in Split}
+    splitter = FileSplitter(**file_args)
+    data = splitter.run(swbd_data.iloc[1:100])
+    assert "split" in data.columns
+
+    for s in Split:
+        assert s.name.lower() in data.split.unique()
+
+def test_file_splitter_mos(mos_data):
+    file_args = {s.name.lower(): f"mos/{s.name.lower()}.txt" for s in Split}
+    splitter = FileSplitter(**file_args)
+    data = splitter.run(mos_data)
+    assert "split" in data.columns
+
+    for s in Split:
+        assert s.name.lower() in data.split.unique()
+
 
 
 def test_agreement(swbd_data):

@@ -234,8 +234,9 @@ class AgreementConsolidator:
 
 class FileSplitter:
     def __init__(self, **files: str) -> None:
+        base_dir = Env.load().RAW_DIR
         self.files = {
-            Split[split.upper()]: next(Env.load().RAW_DIR.rglob(f"*{file}"))
+            Split[split.upper()]: next(base_dir.rglob(f"*{file}"))
             for split, file in files.items()
         }
         logger.info(f"found files for the splits at {self.files}")
@@ -245,25 +246,34 @@ class FileSplitter:
         for split, file in self.files.items():
             logger.info(f"reading file {file}")
             with file.open("r") as f:
-                maps.update({tuple(l.split("/")): split for l in f.readlines()})
-
-        return maps
+                lines = f.readlines()
+                lines = [l.strip()for l in lines]
+                lines = [l.split("/") if "/" in l else l for l in lines]
+                if isinstance(lines[0], str):  # no two keys
+                    new_entry = {l: split for l in lines}
+                    n_keys = 1
+                elif isinstance(lines[0], list):
+                    new_entry = {(l[0], int(l[1])): split for l in lines}
+                    n_keys = 2
+                maps.update(new_entry)
+        return maps, n_keys
 
     def run(self, data: pd.DataFrame) -> pd.DataFrame:
-        maps = self.read_files()
+        maps, n_keys = self.read_files()
 
         def _retrieve(key: pd.Series | str):
-            key_unpacked = tuple(key.values) if isinstance(key, pd.Series) else key
+            key_unpacked = key.iloc[0] if len(key) == 1 else tuple(key.values)
 
             map_entry = maps.get(key_unpacked)
             return map_entry.name.lower() if map_entry else None
 
-        idx_cols = data.filter(like="idx")
+        idx_cols = data.filter(like="idx" if n_keys == 2 else "file_idx")
         tqdm.pandas(desc="associating utterances to splits ...")
         split_col = idx_cols.progress_apply(_retrieve, axis=1)
 
         logger.info("merging split info back into data.")
         data["split"] = split_col
+        data = data[~data.split.isna()]
         return data
 
 
@@ -310,8 +320,6 @@ class AverageConsolidator:
         data_trunc = data_trunc.groupby(by=idx_cols).first()
         data_trunc[self.mode] = result
         return data_trunc.reset_index()
-
-
 
 
 class PreproFuncs(Enum):

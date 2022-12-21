@@ -25,7 +25,7 @@ class TrainJob(Job):
         model = instructions.model
         data = instructions.data
         trainer = instructions.trainer_factory(
-            model=model, data=data, save_pth=Path(self.out_pth)
+            model=model, train_data=data, save_pth=Path(self.out_pth)
         )
 
         trainer.fit()

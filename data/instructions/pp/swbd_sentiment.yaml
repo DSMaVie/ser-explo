@@ -15,9 +15,9 @@ steps:
           - transcript
     - name: produce_splits_based_on_files
       args:
-        train: train.txt
-        val: val.txt
-        test: test.txt
+        train: swbd/train.txt
+        val: swbd/val.txt
+        test: swbd/test.txt
 
 features:
     name: logmelspec

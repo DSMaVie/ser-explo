@@ -25,22 +25,22 @@ class Hdf5Dataset(Dataset):
         with h5py.File(self.src_path, "r") as file:
 
             node = file[f"{self.split.name.lower()}/{idx}"]
-            labels = node.attrs["label"]
-            features = node[()]
+            labels = torch.Tensor(node.attrs["label"])
+            features = torch.Tensor(node[()])
+
+            logger.info(f"found {features} of shape {features.shape}")
             return features, labels
 
     def get_indices(self):
+        keys = []
         with h5py.File(self.src_path, "r") as file:
             logger.info(
                 f"opening file at {self.src_path}. available first lvl keys {list(file.keys())}"
             )
-            keys = file[self.split.name.lower()].visit(
-                lambda key: key
-                if isinstance(file[f"{self.split.name.lower()}/{key}"], h5py.Dataset)
+            train_block = file[self.split.name.lower()]
+            train_block.visit(
+                lambda key: keys.append(key)
+                if isinstance(train_block[key], h5py.Dataset)
                 else None
             )
-        return [k for k in keys if k]
-
-
-# TODO: swbd and mos have file probs -> file splitter is not working properly!
-#       -> test with a test!
+        return keys

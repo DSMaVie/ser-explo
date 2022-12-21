@@ -25,7 +25,7 @@ class MultiplcativeSoftAttn(nn.Module):
         alpha_tilde = R @ self.weight_vec
         alpha = nn.functional.softmax(
             alpha_tilde, dim=1
-        )  # this softmax should be len masked for packed tensors!
+        )  # this softmax should be len masked for packed tensors!!!!
         return torch.einsum("btf,bt -> bf", x, alpha)
 
 

@@ -1,3 +1,3 @@
-lstm_hidden_dim: 1024 *hidden_dim
-soft_attn_hidden_dim: &hidden_dim
+soft_attn_hidden_dim: &hidden_dim 1024
+lstm_hidden_dim: *hidden_dim
 n_lstm_layers: 1

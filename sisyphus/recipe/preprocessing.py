@@ -20,7 +20,7 @@ class PreprocessingJob(Job):
         logger.info(f"loading instructions from {pth_to_instructions}")
         self.instructions = PreproInstructions.from_yaml(pth_to_instructions)
 
-        self.out_pth = self.output_path(self.instructions.src.name, directory=True)
+        self.out_pth = self.output_path("", directory=True)
 
     def process_manifest(self):
         manifest_pth = (
