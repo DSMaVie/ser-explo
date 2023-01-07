@@ -26,8 +26,9 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TrainingsInstructions:
     model: nn.Module
-    data: DataLoader
-    trainer_factory: Callable[[nn.Module, DataLoader, Path], Trainer]
+    train_data: DataLoader
+    val_data: DataLoader
+    trainer_factory: Callable[..., Trainer]
 
     @classmethod
     def from_yaml(
@@ -48,9 +49,11 @@ class TrainingsInstructions:
         with (pth_to_pp_output / "label_encoder.pkl").open("rb") as file:
             label_encodec = pickle.load(file)
 
-        dataloader = cls._get_data_loader(
-            pth_to_pp_output,
-            batch_size=train_data["batch_size"],
+        train_dataloader = cls._get_data_loader(
+            pth_to_pp_output, batch_size=train_data["batch_size"], split=Split.TRAIN
+        )
+        val_dataloader = cls._get_data_loader(
+            pth_to_pp_output, batch_size=train_data["batch_size"], split=Split.VAL
         )
 
         model = cls._get_model(
@@ -65,7 +68,12 @@ class TrainingsInstructions:
             model.parameters(), train_args=train_data, is_mhe=label_encodec.get_is_mhe()
         )
 
-        return cls(model=model, data=dataloader, trainer_factory=trainer_factory)
+        return cls(
+            model=model,
+            train_data=train_dataloader,
+            val_data=val_dataloader,
+            trainer_factory=trainer_factory,
+        )
 
     @staticmethod
     def _get_model(
@@ -85,10 +93,11 @@ class TrainingsInstructions:
     def _get_data_loader(
         pp_path: Path,
         batch_size: int,
+        split: Split,
         num_workers: int = 0,
         gpu_available: bool = False,
     ):
-        dataset = Hdf5Dataset(pp_path / "processed_data.h5", split=Split.TRAIN)
+        dataset = Hdf5Dataset(pp_path / "processed_data.h5", split=split)
         logger.info(f"found {len(dataset.get_indices())} examples in the train set")
         sampler = SubsetRandomSampler(dataset.get_indices())
         return DataLoader(

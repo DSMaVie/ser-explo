@@ -1,6 +1,11 @@
 import logging
 from pathlib import Path
 
+from erinyes.train.callbacks import (
+    CombineCallbacks,
+    ResetIfNoImprovement,
+    TrackBestLoss,
+)
 from erinyes.train.instructions import TrainingsInstructions
 from sisyphus import Job, Task, tk
 
@@ -23,12 +28,21 @@ class TrainJob(Job):
         )
 
         model = instructions.model
-        data = instructions.data
+        train_data = instructions.train_data
+        val_data = instructions.val_data
         trainer = instructions.trainer_factory(
-            model=model, train_data=data, save_pth=Path(self.out_pth)
+            model=model,
+            train_data=train_data,
+            save_pth=Path(self.out_pth),
+            on_epoch=CombineCallbacks(
+                callbacks=[
+                    TrackBestLoss(val_data=val_data),
+                    ResetIfNoImprovement(val_data=val_data),
+                ]
+            ),
         )
 
         trainer.fit()
 
     def tasks(self):
-        yield Task("run")
+        yield Task("run", rqmt={"engine": "krylov"})

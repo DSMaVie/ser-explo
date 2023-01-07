@@ -36,8 +36,8 @@ class Trainer:
         model: nn.Module | None = None,
         train_data: DataLoader | None = None,
         gpu_available: bool = False,
-        # after_epoch: Callable[[int, torch.TensorType]],
-        # after_update: Callable[[int, list[torch.TensorType]]],
+        after_epoch_callback: Callable[[Trainer]] | None = None,
+        after_update_callback: Callable[[Trainer]] | None = None,
     ):
         self.max_epochs = max_epochs
         self.loss_fn = loss_fn
@@ -51,6 +51,9 @@ class Trainer:
         self.completed_batches = 0
         self._model_cls = model.__class__ if model else None
         self._train_device = "cuda" if gpu_available else "cpu"
+
+        self.after_epoch = after_epoch_callback
+        self.after_update = after_update_callback
 
     def fit(self):
         if self.completed_epochs == self.max_epochs:
@@ -85,10 +88,15 @@ class Trainer:
                 self.optimizer.zero_grad()
 
                 self.completed_batches = batch_idx
+                if self.after_update:
+                    self.after_update(self)
 
             # reset batch number
             self.completed_epochs = epoch_idx
             self.save_state(self.save_pth / "last")
+
+            if self.after_epoch:
+                self.after_epoch(self)
 
         logger.info("Finished training!")
         return self.model
@@ -104,6 +112,8 @@ class Trainer:
                 "loss_fn": self.loss_fn,
                 "optimizer": self.optimizer,
                 "max_epochs": self.max_epochs,
+                "after_epoch": self.after_epoch,
+                "after_update": self.after_update
             },
             pth / "train_state.pt",
         )
@@ -125,6 +135,9 @@ class Trainer:
         )
         inst._model_cls = state_dict["_model_cls"]
         inst.train_data = torch.load(pth / "train_data.pt")
+
+        inst.after_epoch = state_dict["after_epoch"]
+        inst.after_update = state_dict["after_update"]
         return inst
 
 

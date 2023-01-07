@@ -61,19 +61,3 @@ packages in the aforementioned state. They worked in Dec22.
 |Positive|Positive|
 |Negative|Negative|
 |Neutral|Neutral|
-
-
-## Instructions
-
-Preprocessing is controlled by `.yaml` instructions. These are structured with the following keys:
-
-* `src`: the source corpus
-* `steps`: the description of thge individual steps to alter the manifest.
-  * `name`: the name of the step. must match a step from the `PreproFunc` enum.
-  * `args`: arguments for this step
-  *
-* `label`: information for the label encoder-decoder (encodec).
-  * `classes`: a list of possible classes
-  * `NofN`: weather labels are exclusive or not. If true the encoder produces MHE labels
-* `features`: information for the feature extractor
-  * arguments for this depend on the feature extractor class and are given at instantiation time.
