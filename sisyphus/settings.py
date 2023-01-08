@@ -10,11 +10,12 @@ def engine():
     return EngineSelector(
         {
             "local": LocalEngine(cpus=2, gpus=0, mem=4),
-            "krylov": KrylovEngine(
-                project_name=secrets["PROJECT_NAME"],
-                default_rqmt={"cpu": 4, "gpu": 1, "mem": 20, "time":1 ,"docker_image":secrets["DOCKER_IMAGE"]},
-            ),
-        }, default_engine="local"
+            # "krylov": KrylovEngine(
+            #     project_name=secrets["PROJECT_NAME"],
+            #     default_rqmt={"cpu": 4, "gpu": 1, "mem": 20, "time":1 ,"docker_image":secrets["DOCKER_IMAGE"]},
+            # ),
+        },
+        default_engine="local",
     )
 
 

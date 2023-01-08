@@ -115,7 +115,7 @@ class TrainingsInstructions:
     ) -> Trainer:
         loss = LossFn[
             f"{'binary' if is_mhe else 'mc'}_{train_args['loss']}"
-        ].value()  # TODO: make args addable
+        ].value()  # pot. args in last bracket
         opti = Optimizer[train_args["optimizer"]].value(
             model_params
         )  # TODO: make args addable

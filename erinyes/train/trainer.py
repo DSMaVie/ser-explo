@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
@@ -36,8 +37,8 @@ class Trainer:
         model: nn.Module | None = None,
         train_data: DataLoader | None = None,
         gpu_available: bool = False,
-        after_epoch_callback: Callable[[Trainer]] | None = None,
-        after_update_callback: Callable[[Trainer]] | None = None,
+        after_epoch: Callable[[Trainer]] | None = None,
+        after_update: Callable[[Trainer]] | None = None,
     ):
         self.max_epochs = max_epochs
         self.loss_fn = loss_fn
@@ -52,8 +53,8 @@ class Trainer:
         self._model_cls = model.__class__ if model else None
         self._train_device = "cuda" if gpu_available else "cpu"
 
-        self.after_epoch = after_epoch_callback
-        self.after_update = after_update_callback
+        self.after_epoch = after_epoch
+        self.after_update = after_update
 
     def fit(self):
         if self.completed_epochs == self.max_epochs:
@@ -80,7 +81,7 @@ class Trainer:
 
                 # calc model output and loss
                 pred = self.model(x)
-                loss = self.loss_fn(pred, y.long())
+                loss = self.loss_fn(pred, y)
 
                 # optimize
                 loss.backward()
@@ -102,6 +103,8 @@ class Trainer:
         return self.model
 
     def save_state(self, pth: Path):
+
+        os.makedirs(pth, exist_ok=True)
         torch.save(self.model.state_dict(), pth / "model.pt")
         torch.save(self.train_data, pth / "train_data.pt")
         torch.save(
@@ -113,7 +116,7 @@ class Trainer:
                 "optimizer": self.optimizer,
                 "max_epochs": self.max_epochs,
                 "after_epoch": self.after_epoch,
-                "after_update": self.after_update
+                "after_update": self.after_update,
             },
             pth / "train_state.pt",
         )

@@ -20,7 +20,7 @@ class TrainJob(Job):
 
         self.pth_pp_output = Path(pth_to_pp_output)
         self.pth_to_train_settings = Path(pth_to_train_settings)
-        self.out_pth = self.output_path("test")
+        self.out_pth = self.output_path("training")
 
     def run(self):
         instructions = TrainingsInstructions.from_yaml(
@@ -34,7 +34,7 @@ class TrainJob(Job):
             model=model,
             train_data=train_data,
             save_pth=Path(self.out_pth),
-            on_epoch=CombineCallbacks(
+            after_epoch=CombineCallbacks(
                 callbacks=[
                     TrackBestLoss(val_data=val_data),
                     ResetIfNoImprovement(val_data=val_data),
@@ -45,4 +45,4 @@ class TrainJob(Job):
         trainer.fit()
 
     def tasks(self):
-        yield Task("run", rqmt={"engine": "krylov"})
+        yield Task("run")  # , rqmt={"engine": "krylov"})

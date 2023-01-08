@@ -58,7 +58,8 @@ class SoftAttnLstmClf(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.LazyLinear(out_features=class_dim), nn.Sigmoid() if mhe else nn.Softmax()
+            nn.LazyLinear(out_features=class_dim),
+            nn.Sigmoid() if mhe else nn.Softmax(dim=-1),
         )
 
     def forward(self, x: torch.TensorType) -> torch.TensorType:
