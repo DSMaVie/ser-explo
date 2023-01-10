@@ -50,7 +50,6 @@ class Trainer:
 
         self.completed_epochs = 0
         self.completed_batches = 0
-        self._model_cls = model.__class__ if model else None
         self._train_device = "cuda" if gpu_available else "cpu"
 
         self.after_epoch = after_epoch
@@ -108,13 +107,12 @@ class Trainer:
     def save_state(self, pth: Path):
 
         os.makedirs(pth, exist_ok=True)
-        torch.save(self.model.state_dict(), pth / "model.pt")
+        torch.save(self.model, pth / "model.pt")
         torch.save(self.train_data, pth / "train_data.pt")
         torch.save(
             {
                 "epoch_idx": self.completed_epochs,
                 "batch_idx": self.completed_batches,
-                "_model_cls": self._model_cls,
                 "loss_fn": self.loss_fn,
                 "optimizer": self.optimizer,
                 "max_epochs": self.max_epochs,
@@ -131,22 +129,15 @@ class Trainer:
             max_epochs=state_dict["max_epochs"],
             loss_fn=state_dict["loss_fn"],
             optimizer=state_dict["optimizer"],
+            save_pth=pth,
         )
         inst.completed_batches = state_dict["batch_idx"]
         inst.completed_epochs = state_dict["epoch_idx"]
-        inst.save_pth = pth
 
-        inst.model = state_dict["_model_cls"].from_state_dict(
-            torch.load(pth / "model.pt")
-        )
-        inst._model_cls = state_dict["_model_cls"]
+        model_state = torch.load(pth / "model.pt")
+
         inst.train_data = torch.load(pth / "train_data.pt")
 
         inst.after_epoch = state_dict["after_epoch"]
         inst.after_update = state_dict["after_update"]
         return inst
-
-
-# injectable callbacks!!!
-# they need to serialize themselves
-# test it

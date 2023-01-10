@@ -1,11 +1,12 @@
+import logging
 from pathlib import Path
 
 import torch
 
 from erinyes.train.trainer import Trainer
-import logging
 
 logger = logging.getLogger(__name__)
+
 
 class ModelSelector:
     def __init__(self, run_folder: Path, out_folder: Path) -> None:
@@ -14,12 +15,13 @@ class ModelSelector:
 
     def pick_models(self):
         self.models = {}
-        for pth in self.run_folder:
-            if "best" in pth.parent.stem:
-                monitor = pth.parent.stem.split("best")[1:]
+        for pth in self.input.iterdir():
+            logger.info(f"looking for models in pth {pth}")
+            if "best" in pth.stem:
+                monitor = pth.stem.split("best")[1:]
                 self.models.update({pth: monitor})
 
-            if "last" in pth.parent.stem:
+            if "last" in pth.stem:
                 self.models.update({pth: "last"})
 
     def predict(self, test_data: torch.utils.data.DataLoader):
@@ -28,7 +30,7 @@ class ModelSelector:
             model = Trainer.from_state(pth).model
 
             logger.info("Extracting Test data and predicting on it.")
-            preds, trues = [] , []
+            preds, trues = [], []
             for x, y in test_data:
                 preds.extend(model(x).numpy())
                 trues.extend(y.numpy())
