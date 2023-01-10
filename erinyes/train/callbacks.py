@@ -59,8 +59,12 @@ class ResetIfNoImprovement:
 
         avg_loss = loss / batch_idx
 
-        if avg_loss <= self.best_loss:
-            logger.info("Overwriting batch info, because no improvement was made!")
+        if (
+            avg_loss < self.best_loss and self.best_model
+        ):  # only do this of best model exists
+            logger.info(
+                f"Overwriting batch info because best_loss so far is {self.best_loss}, while this time we got an avg validation loss of {avg_loss}."
+            )
             trainer.completed_batches -= 1
             trainer.completed_epochs -= 1
             trainer.model = self.best_model

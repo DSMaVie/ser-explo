@@ -65,6 +65,9 @@ class Trainer:
 
         self.model.train()
         self.model.to(device=self._train_device)
+
+        logger.info(f"using model of class {self.model.__class__}")
+
         for epoch_idx in tqdm(
             range(self.completed_epochs + 1, self.max_epochs),
             desc="Epoch",

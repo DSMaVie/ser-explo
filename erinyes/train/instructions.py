@@ -9,10 +9,9 @@ from typing import Callable, Iterator
 
 import yaml
 from torch import nn
-from torch.utils.data import DataLoader, SubsetRandomSampler
+from torch.utils.data import DataLoader
 
-from erinyes.data.hdf_dataset import Hdf5Dataset
-from erinyes.data.util import collate_with_pack_pad_to_batch
+from erinyes.data.util import get_data_loader
 from erinyes.models import Models
 from erinyes.train.other import LossFn, Optimizer
 from erinyes.train.trainer import Trainer
@@ -49,10 +48,10 @@ class TrainingsInstructions:
         with (pth_to_pp_output / "label_encoder.pkl").open("rb") as file:
             label_encodec = pickle.load(file)
 
-        train_dataloader = cls._get_data_loader(
+        train_dataloader = get_data_loader(
             pth_to_pp_output, batch_size=train_data["batch_size"], split=Split.TRAIN
         )
-        val_dataloader = cls._get_data_loader(
+        val_dataloader = get_data_loader(
             pth_to_pp_output, batch_size=train_data["batch_size"], split=Split.VAL
         )
 
@@ -87,26 +86,6 @@ class TrainingsInstructions:
         model_inst = Models[model_name].value
         return model_inst(
             input_feature_dim=in_dim, class_dim=out_dim, mhe=is_mhe, **other_arch_data
-        )
-
-    @staticmethod
-    def _get_data_loader(
-        pp_path: Path,
-        batch_size: int,
-        split: Split,
-        num_workers: int = 0,
-        gpu_available: bool = False,
-    ):
-        dataset = Hdf5Dataset(pp_path / "processed_data.h5", split=split)
-        logger.info(f"found {len(dataset.get_indices())} examples in the train set")
-        sampler = SubsetRandomSampler(dataset.get_indices())
-        return DataLoader(
-            dataset,
-            batch_size=batch_size,
-            sampler=sampler,
-            collate_fn=collate_with_pack_pad_to_batch,
-            num_workers=num_workers,
-            pin_memory=gpu_available,
         )
 
     @staticmethod
