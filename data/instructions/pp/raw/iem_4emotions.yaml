@@ -1,0 +1,27 @@
+src: IEM
+steps:
+    - name: normalize_labels
+      args:
+        target: &target_col Emotion
+    - name: filter_emotions
+      args:
+        keep: &target_classes
+        - Happiness
+        - Anger
+        - Sadness
+        - Neutral
+        fold:
+         Excitement: Happiness
+    - name: produce_conditional_splits
+      args:
+        src_col: Session
+        train: 1..4
+        test: 5
+
+features:
+    name: normedraw
+    args:
+labels:
+    classes: *target_classes
+    NofN: False
+    target: *target_col

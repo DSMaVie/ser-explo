@@ -1,6 +1,6 @@
 def engine():
     from dotenv import dotenv_values, find_dotenv
-    from krylov_engine import KrylovEngine
+    # from krylov_engine import KrylovEngine
 
     from sisyphus.engine import EngineSelector
     from sisyphus.localengine import LocalEngine
