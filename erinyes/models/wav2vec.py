@@ -1,47 +1,52 @@
+from __future__ import annotations
+
 import logging
 import os
-import shutil
-from functools import partial
-from turtle import forward
 
-import torch
 from torch import nn
 from transformers import AutoProcessor, Wav2Vec2Model
 
 from erinyes.util.env import Env
 
-_MODEL_LOC = Env.load().MODEL_DIR / "wav2vec"
+_PRETRAINED_MODEL_LOC = Env.load().MODEL_DIR / "wav2vec"
 
 
 class Wav2Vec(nn.Module):
-    def __init__(self) -> None:
+    def __init__(self, frozen: bool = False, decoder: nn.Module | None = None) -> None:
         super().__init__()
 
-        if not _MODEL_LOC.exists():
+        if not _PRETRAINED_MODEL_LOC.exists():
             logging.error("Please load the model from the net first!")
 
-        self.processor = Wav2Vec2Model.from_pretrained(_MODEL_LOC)
-        self.model = AutoProcessor.from_pretrained(_MODEL_LOC)
-        self.clf_head = partial(torch.argmax, dim=-1)
+        self.processor = AutoProcessor.from_pretrained(_PRETRAINED_MODEL_LOC)
+        self.encoder = Wav2Vec2Model.from_pretrained(_PRETRAINED_MODEL_LOC)
+        self.decoder = decoder
+
+        for param in self.encoder.parameters:
+            param.requires_grad = not frozen
 
     @staticmethod
     def load_from_web(overwrite: bool = False):
         new_created = False
 
-        if not (_MODEL_LOC).exists():
-            os.makedirs(_MODEL_LOC)
+        if not _PRETRAINED_MODEL_LOC.exists():
+            os.makedirs(_PRETRAINED_MODEL_LOC)
             new_created = True
 
         if overwrite or new_created:
-            for pth in _MODEL_LOC.iterdir():
-                shutil.rmtree(pth)
+            for pth in _PRETRAINED_MODEL_LOC.iterdir():
+                os.remove(pth)
 
             model = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base-960h")
-            model.save_pretrained(_MODEL_LOC)
+            model.save_pretrained(_PRETRAINED_MODEL_LOC)
             processor = AutoProcessor.from_pretrained("facebook/wav2vec2-base-960h")
-            processor.save_pretrained(_MODEL_LOC)
+            processor.save_pretrained(_PRETRAINED_MODEL_LOC)
 
     def forward(self, x):
-        x = self.processor(x)
-        x = self.model(x)
-        return self.clf_head(x)
+        x = self.processor(x, sampling_rate=16e3, return_tensors="pt")["input_features"]
+        w2v_out = self.model(x).last_hidden_state
+
+        if not self.decoder:
+            return w2v_out
+
+        return self.decoder(w2v_out)

@@ -47,6 +47,10 @@ class NormalizedRawAudio(FeatureExtractor):
     def __apply__(self, signal: np.ndarray, sr: int) -> np.ndarray:
         mu = np.mean(signal)
         sig = np.std(signal)
+        if self.additional_args["resample_to"]:
+            signal = librosa.resample(
+                signal, orig_sr=sr, target_sr=self.additional_args["resample_to"]
+            )
         return (signal - mu) / sig
 
     def get_feature_dim(self):

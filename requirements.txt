@@ -6,6 +6,7 @@ Fire
 python-dotenv
 pyyaml
 h5py
+tables
 torch
 transformers
 

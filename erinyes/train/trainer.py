@@ -135,7 +135,7 @@ class Trainer:
         inst.completed_epochs = state_dict["epoch_idx"]
 
         model_state = torch.load(pth / "model.pt")
-
+        inst.model = model_state
         inst.train_data = torch.load(pth / "train_data.pt")
 
         inst.after_epoch = state_dict["after_epoch"]

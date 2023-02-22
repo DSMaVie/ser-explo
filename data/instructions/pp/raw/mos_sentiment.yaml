@@ -18,6 +18,7 @@ steps:
 features:
     name: normedraw
     args:
+      resample_to: 16_000
 labels:
     classes: *classes
     NofN: False
