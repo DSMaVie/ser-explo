@@ -24,7 +24,7 @@ def run_w2v_baseline():
             str(Env.load().INST_DIR / "train" / f"{EXPERIMENT_NAME}.yaml")
         )
         train_job = TrainJob(
-            pth_to_pp_output=pp_job.out, pth_to_train_settings=train_info
+            pth_to_pp_output=pp_job.out_pth, pth_to_train_settings=train_info
         )
 
         tk.register_output(f"{EXPERIMENT_NAME}/{pth.stem}/trained", train_job.out_pth)

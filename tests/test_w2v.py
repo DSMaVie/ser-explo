@@ -1,4 +1,4 @@
-from erinyes.models.wav2vec import Wav2Vec
+from erinyes.models.wav2vec_base import Wav2Vec
 
 
 def test_w2v_webload():

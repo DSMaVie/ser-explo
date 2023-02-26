@@ -1,0 +1,6 @@
+model: w2v
+frozen: False
+classifier:
+  model: pooled_seq_clf
+  out_dim:
+  is_mhe:

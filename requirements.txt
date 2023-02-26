@@ -1,3 +1,4 @@
+tables<3.8
 numpy
 pandas
 tqdm
@@ -6,14 +7,13 @@ Fire
 python-dotenv
 pyyaml
 h5py
-tables
 torch
 transformers
-
 psutil
 ipython
 flask
 better_exchook
-
+git+https://github.com/rwth-i6/sisyphus.git
 pytest
 black
+seaborn

@@ -17,7 +17,7 @@ from erinyes.train.other import LossFn, Optimizer
 from erinyes.train.trainer import Trainer
 from erinyes.util.enums import Split
 from erinyes.util.env import Env
-from erinyes.util.types import yamlDict
+from erinyes.util.yaml import split_of, yamlDict
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class TrainingsInstructions:
         with pth_to_train_instructs.open("r") as train_file:
             train_data = yaml.safe_load(train_file)
         pth_to_arch_params = (
-            Env.load().INST_DIR / "architecture" / f"{train_data['model']}.yaml"
+            Env.load().INST_DIR / "architecture" / f"{train_data['architecture']}.yaml"
         )
         with pth_to_arch_params.open("r") as arch_file:
             arch_data = yaml.safe_load(arch_file)
@@ -55,13 +55,7 @@ class TrainingsInstructions:
             pth_to_pp_output, batch_size=train_data["batch_size"], split=Split.VAL
         )
 
-        model = cls._get_model(
-            model_name=train_data["model"],
-            in_dim=feature_extractor.get_feature_dim(),
-            out_dim=label_encodec.get_class_dim(),
-            is_mhe=label_encodec.get_is_mhe(),
-            other_arch_data=arch_data,
-        )
+        model = cls._get_model(arch_data)
 
         trainer_factory = cls._get_trainer_factory(
             model.parameters(), train_args=train_data, is_mhe=label_encodec.get_is_mhe()
@@ -76,17 +70,27 @@ class TrainingsInstructions:
 
     @staticmethod
     def _get_model(
-        model_name: str,
+        arch_data: yamlDict,
         in_dim: int,
         out_dim: int,
         is_mhe: bool,
-        other_arch_data: yamlDict,
     ) -> nn.Module:
+        model_inst = Models[split_of(arch_data, "model")].value
 
-        model_inst = Models[model_name].value
-        return model_inst(
-            input_feature_dim=in_dim, class_dim=out_dim, mhe=is_mhe, **other_arch_data
-        )
+        for key in arch_data:
+            # resolve sub modules
+            if isinstance(arch_data[key], dict):
+                arch_data[key] = TrainingsInstructions._get_model(arch_data[key])
+
+            # resolve common dynamic variables
+            if key == "out_dim":
+                arch_data[key] = out_dim
+            elif key == "in_dim":
+                arch_data[key] = in_dim
+            elif key == is_mhe:
+                arch_data[key] = is_mhe
+
+        return model_inst(**arch_data)
 
     @staticmethod
     def _get_trainer_factory(

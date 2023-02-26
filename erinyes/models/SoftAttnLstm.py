@@ -32,19 +32,19 @@ class MultiplcativeSoftAttn(nn.Module):
 class SoftAttnLstmClf(nn.Module):
     def __init__(
         self,
-        input_feature_dim: int,
+        in_dim: int,
         lstm_hidden_dim: int,
-        class_dim: int,
+        out_dim: int,
         soft_attn_hidden_dim: int | None = None,
         n_lstm_layers: int = 1,
-        mhe: bool = False,
+        is_mhe: bool = False,
     ) -> None:
         super().__init__()
         if not soft_attn_hidden_dim:
             soft_attn_hidden_dim = 2 * lstm_hidden_dim
 
         self.encoder = nn.LSTM(
-            input_size=input_feature_dim,
+            input_size=in_dim,
             hidden_size=lstm_hidden_dim,
             num_layers=n_lstm_layers,
             bidirectional=True,
@@ -58,8 +58,8 @@ class SoftAttnLstmClf(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.LazyLinear(out_features=class_dim),
-            nn.Sigmoid() if mhe else nn.Softmax(dim=-1),
+            nn.LazyLinear(out_features=out_dim),
+            nn.Sigmoid() if is_mhe else nn.Softmax(dim=-1),
         )
 
     def forward(self, x: torch.TensorType) -> torch.TensorType:

@@ -12,7 +12,9 @@ _PRETRAINED_MODEL_LOC = Env.load().MODEL_DIR / "wav2vec"
 
 
 class Wav2Vec(nn.Module):
-    def __init__(self, frozen: bool = False, decoder: nn.Module | None = None) -> None:
+    def __init__(
+        self, frozen: bool = False, classifier: nn.Module | None = None
+    ) -> None:
         super().__init__()
 
         if not _PRETRAINED_MODEL_LOC.exists():
@@ -20,7 +22,7 @@ class Wav2Vec(nn.Module):
 
         self.processor = AutoProcessor.from_pretrained(_PRETRAINED_MODEL_LOC)
         self.encoder = Wav2Vec2Model.from_pretrained(_PRETRAINED_MODEL_LOC)
-        self.decoder = decoder
+        self.classifier = classifier
 
         for param in self.encoder.parameters:
             param.requires_grad = not frozen
@@ -46,7 +48,7 @@ class Wav2Vec(nn.Module):
         x = self.processor(x, sampling_rate=16e3, return_tensors="pt")["input_features"]
         w2v_out = self.model(x).last_hidden_state
 
-        if not self.decoder:
+        if not self.classifier:
             return w2v_out
 
-        return self.decoder(w2v_out)
+        return self.classifier(w2v_out)
