@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from pathlib import Path
 
@@ -14,17 +16,23 @@ logger = logging.getLogger(__name__)
 
 class TrainJob(Job):
     def __init__(
-        self, pth_to_pp_output: tk.Path, pth_to_train_settings: tk.Path
+        self,
+        pth_to_pp_output: tk.Path,
+        pth_to_train_settings: tk.Path,
+        pth_to_pretrained_model: tk.Path | None = None,
     ) -> None:
         super().__init__()
 
         self.pth_pp_output = Path(pth_to_pp_output)
         self.pth_to_train_settings = Path(pth_to_train_settings)
+        self.pth_to_pretrained_model = pth_to_pretrained_model
         self.out_pth = self.output_path("training")
 
     def run(self):
         instructions = TrainingsInstructions.from_yaml(
-            self.pth_to_train_settings, pth_to_pp_output=self.pth_pp_output
+            self.pth_to_train_settings,
+            pth_to_pp_output=self.pth_pp_output,
+            pth_to_pretrained_model=self.pth_to_pretrained_model,
         )
 
         model = instructions.model
@@ -45,4 +53,4 @@ class TrainJob(Job):
         trainer.fit()
 
     def tasks(self):
-        yield Task("run")  # , rqmt={"engine": "krylov"})
+        yield Task("run", rqmt={"cpu": 2, "mem": 20, "gpu": 1})

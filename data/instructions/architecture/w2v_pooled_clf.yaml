@@ -1,4 +1,5 @@
 model: w2v
+model_loc:
 frozen: False
 classifier:
   model: pooled_seq_clf

@@ -4,6 +4,7 @@ from torch import nn
 
 class PooledSeqClassifier(nn.Module):
     def __init__(self, out_dim: int, is_mhe: bool) -> None:
+        super().__init__()
         self.projector = nn.Sequential(
             nn.LazyLinear(out_features=out_dim),
             nn.Sigmoid() if is_mhe else nn.Softmax(dim=-1),

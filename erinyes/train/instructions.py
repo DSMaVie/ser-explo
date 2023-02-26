@@ -34,6 +34,7 @@ class TrainingsInstructions:
         cls,
         pth_to_train_instructs: Path,
         pth_to_pp_output: Path,
+        pth_to_pretrained_model:Path | None = None
     ):
         with pth_to_train_instructs.open("r") as train_file:
             train_data = yaml.safe_load(train_file)
@@ -55,7 +56,13 @@ class TrainingsInstructions:
             pth_to_pp_output, batch_size=train_data["batch_size"], split=Split.VAL
         )
 
-        model = cls._get_model(arch_data)
+        model = cls._get_model(
+            arch_data,
+            in_dim=feature_extractor.get_feature_dim(),
+            out_dim=label_encodec.get_class_dim(),
+            is_mhe=label_encodec.get_is_mhe(),
+            model_loc=str(pth_to_pretrained_model)
+        )
 
         trainer_factory = cls._get_trainer_factory(
             model.parameters(), train_args=train_data, is_mhe=label_encodec.get_is_mhe()
@@ -74,13 +81,17 @@ class TrainingsInstructions:
         in_dim: int,
         out_dim: int,
         is_mhe: bool,
+        model_loc: str | None = None,
     ) -> nn.Module:
-        model_inst = Models[split_of(arch_data, "model")].value
+        model_name, arch_data = split_of(arch_data, "model")
+        model_inst = Models[model_name].value
 
         for key in arch_data:
             # resolve sub modules
             if isinstance(arch_data[key], dict):
-                arch_data[key] = TrainingsInstructions._get_model(arch_data[key])
+                arch_data[key] = TrainingsInstructions._get_model(
+                    arch_data[key], in_dim=in_dim, out_dim=out_dim, is_mhe=is_mhe
+                )
 
             # resolve common dynamic variables
             if key == "out_dim":
@@ -89,6 +100,8 @@ class TrainingsInstructions:
                 arch_data[key] = in_dim
             elif key == is_mhe:
                 arch_data[key] = is_mhe
+            elif key == "model_loc" and model_loc:
+                arch_data[key] = model_loc
 
         return model_inst(**arch_data)
 
