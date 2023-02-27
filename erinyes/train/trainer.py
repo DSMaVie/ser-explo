@@ -40,6 +40,7 @@ class Trainer:
         after_epoch: Callable[[Trainer]] | None = None,
         after_update: Callable[[Trainer]] | None = None,
     ):
+        logger.info("initalizing trainer class")
         self.max_epochs = max_epochs
         self.loss_fn = loss_fn
         self.optimizer = optimizer
@@ -54,6 +55,7 @@ class Trainer:
 
         self.after_epoch = after_epoch
         self.after_update = after_update
+        logger.info("init of trainer done.")
 
     def fit(self):
         if self.completed_epochs == self.max_epochs:
@@ -62,18 +64,19 @@ class Trainer:
         if not self.model or not self.train_data:
             raise AttributeError("Either Model or Train_Data has not been set prior!")
 
+        logger.info(f"using model of class {self.model.__class__}")
         self.model.train()
         self.model.to(device=self._train_device)
+        logger.info("send model to gpu")
 
-        logger.info(f"using model of class {self.model.__class__}")
-
+        logger.info("starting training!")
         for epoch_idx in tqdm(
             range(self.completed_epochs + 1, self.max_epochs),
             desc="Epoch",
             initial=self.completed_epochs,
             total=self.max_epochs,
         ):
-
+            logger.info(f"starting epoch {epoch_idx}")
             for batch_idx, (x, y) in tqdm(
                 enumerate(self.train_data, start=self.completed_batches + 1),
                 desc="Current Batch in Epoch",
@@ -105,7 +108,6 @@ class Trainer:
         return self.model
 
     def save_state(self, pth: Path):
-
         os.makedirs(pth, exist_ok=True)
         torch.save(self.model, pth / "model.pt")
         torch.save(self.train_data, pth / "train_data.pt")

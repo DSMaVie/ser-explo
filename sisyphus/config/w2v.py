@@ -1,12 +1,11 @@
 import logging
 
+from recipe.download_pt_model import DownloadPretrainedModelJob
 from recipe.preprocessing import PreprocessingJob
 from recipe.train import TrainJob
-from recipe.download_pt_model import DownloadPretrainedModelJob
 
 from erinyes.util.env import Env
 from sisyphus import tk
-
 
 EXPERIMENT_NAME = "w2v_baselines"
 
@@ -27,7 +26,10 @@ def run_w2v_baseline():
             str(Env.load().INST_DIR / "train" / f"{EXPERIMENT_NAME}.yaml")
         )
         train_job = TrainJob(
-            pth_to_pp_output=pp_job.out_pth, pth_to_train_settings=train_info, pth_to_pretrained_model=model_dl_job.out
+            pth_to_pp_output=pp_job.out_pth,
+            pth_to_train_settings=train_info,
+            pth_to_pretrained_model=model_dl_job.out,
+            rqmts={"cpu": 2, "mem": 20, "gpu": 1, "time": 10},
         )
 
         tk.register_output(f"{EXPERIMENT_NAME}/{pth.stem}/trained", train_job.out_pth)

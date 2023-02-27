@@ -3,3 +3,5 @@ max_epochs: 200
 batch_size: 64
 loss: ce
 optimizer: Adam
+start_with_tensors: True
+pack_sequences: False

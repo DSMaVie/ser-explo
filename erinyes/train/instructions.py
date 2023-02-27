@@ -34,10 +34,14 @@ class TrainingsInstructions:
         cls,
         pth_to_train_instructs: Path,
         pth_to_pp_output: Path,
-        pth_to_pretrained_model:Path | None = None
+        rqmts: dict,
+        pth_to_pretrained_model: Path | None = None,
     ):
+        logger.info("loading instructions from yaml")
         with pth_to_train_instructs.open("r") as train_file:
             train_data = yaml.safe_load(train_file)
+            logger.info(f"found configuration {train_data}")
+            
         pth_to_arch_params = (
             Env.load().INST_DIR / "architecture" / f"{train_data['architecture']}.yaml"
         )
@@ -50,7 +54,12 @@ class TrainingsInstructions:
             label_encodec = pickle.load(file)
 
         train_dataloader = get_data_loader(
-            pth_to_pp_output, batch_size=train_data["batch_size"], split=Split.TRAIN
+            pth_to_pp_output,
+            batch_size=train_data["batch_size"],
+            split=Split.TRAIN,
+            num_workers=rqmts.get("cpu", 0),
+            gpu_available=True if rqmts.get("gpu") else False,
+            pack=train_data.get("pack_sequences", True)
         )
         val_dataloader = get_data_loader(
             pth_to_pp_output, batch_size=train_data["batch_size"], split=Split.VAL
@@ -61,8 +70,9 @@ class TrainingsInstructions:
             in_dim=feature_extractor.get_feature_dim(),
             out_dim=label_encodec.get_class_dim(),
             is_mhe=label_encodec.get_is_mhe(),
-            model_loc=str(pth_to_pretrained_model)
+            model_loc=str(pth_to_pretrained_model),
         )
+        logger.info("initialized model")
 
         trainer_factory = cls._get_trainer_factory(
             model.parameters(), train_args=train_data, is_mhe=label_encodec.get_is_mhe()
@@ -109,6 +119,7 @@ class TrainingsInstructions:
     def _get_trainer_factory(
         model_params: Iterator[nn.Parameter], train_args: yamlDict, is_mhe: bool = False
     ) -> Trainer:
+        logger.info("building trainer factory")
         loss = LossFn[
             f"{'binary' if is_mhe else 'mc'}_{train_args['loss']}"
         ].value()  # pot. args in last bracket

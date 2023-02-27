@@ -27,7 +27,7 @@ class Hdf5Dataset(Dataset):
             node = file[f"{self.split.name.lower()}/{idx}"]
             labels = torch.Tensor(node.attrs["label"])
             features = torch.Tensor(node[()])
-            
+
             return features, labels
 
     def get_indices(self):

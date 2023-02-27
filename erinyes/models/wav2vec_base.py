@@ -1,17 +1,13 @@
 from __future__ import annotations
 
-import logging
-import os
-
+import torch
 from torch import nn
 from transformers import AutoProcessor, Wav2Vec2Model
-
-from erinyes.util.env import Env
 
 
 class Wav2Vec(nn.Module):
     def __init__(
-        self, model_loc:str, frozen: bool = False, classifier: nn.Module | None = None
+        self, model_loc: str, frozen: bool = False, classifier: nn.Module | None = None
     ) -> None:
         super().__init__()
 
@@ -19,11 +15,13 @@ class Wav2Vec(nn.Module):
         self.encoder = Wav2Vec2Model.from_pretrained(model_loc)
         self.classifier = classifier
 
-        for param in self.encoder.parameters:
+        for param in self.encoder.parameters():
             param.requires_grad = not frozen
 
     def forward(self, x):
-        x = self.processor(x, sampling_rate=16e3, return_tensors="pt")["input_features"]
+        x = self.processor(x, sampling_rate=16e3, return_tensors="pt", padding=True)[
+            "input_values"
+        ].squeeze()
         w2v_out = self.model(x).last_hidden_state
 
         if not self.classifier:
