@@ -6,6 +6,7 @@ import pandas as pd
 
 from erinyes.preprocess.instructions import PreproInstructions
 from erinyes.preprocess.serialization import serialize_preprocessed_data
+from erinyes.util.enums import Dataset
 from erinyes.util.env import Env
 from sisyphus import Job, Task, tk
 
@@ -57,6 +58,7 @@ class PreprocessingJob(Job):
             feature_extractor=fe,
             label_encodec=le,
             target_col=self.instructions.label_target,
+            use_start_end= self.instructions.src != Dataset.IEM
         )
 
     def tasks(self):

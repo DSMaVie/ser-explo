@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable
 
 import numpy as np
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from erinyes.train.trainer import Trainer
@@ -12,50 +12,50 @@ from erinyes.train.trainer import Trainer
 logger = logging.getLogger(__name__)
 
 
-class TrackBestLoss:
+class SaveBestLoss:
     def __init__(self, val_data: DataLoader) -> None:
         self.data = val_data
         self.best_loss = -np.inf
 
-    def __call__(self, trainer: Trainer):
-        trainer.model.eval()
+    def after_batch(self, train_state: Trainer):
+        train_state.model.eval()
         loss = -np.inf
         for batch_idx, (x, y) in tqdm(
             enumerate(self.data),
             desc="Validation: Current Batch in Epoch",
         ):
-            x = x.to(trainer._train_device)
-            y = y.to(trainer._train_device)
+            x = x.to(train_state._train_device)
+            y = y.to(train_state._train_device)
 
             # calc model output and loss
-            pred = trainer.model(x)
-            loss += trainer.loss_fn(pred, y.long())
+            pred = train_state.model(x)
+            loss += train_state.loss_fn(pred, y.long())
 
         avg_loss = loss / batch_idx
         if avg_loss > self.best_loss:
             self.best_loss = avg_loss
-            trainer.save_state(trainer.save_pth / "best_val_loss")
+            train_state.save_state(train_state.save_pth / "best_val_loss")
 
 
-class ResetIfNoImprovement:
+class ResetStateIfNoImprovement:
     def __init__(self, val_data: DataLoader) -> None:
         self.data = val_data
         self.best_loss = -np.inf
         self.best_model = None
 
-    def __call__(self, trainer: Trainer):
-        trainer.model.eval()
+    def after_loss(self, train_state: Trainer):
+        train_state.model.eval()
         loss = -np.inf
         for batch_idx, (x, y) in tqdm(
             enumerate(self.data),
             desc="Validation: Current Batch in Epoch",
         ):
-            x = x.to(trainer._train_device)
-            y = y.to(trainer._train_device)
+            x = x.to(train_state._train_device)
+            y = y.to(train_state._train_device)
 
             # calc model output and loss
-            pred = trainer.model(x)
-            loss += trainer.loss_fn(pred, y.long())
+            pred = train_state.model(x)
+            loss += train_state.loss_fn(pred, y.long())
 
         avg_loss = loss / batch_idx
 
@@ -65,18 +65,49 @@ class ResetIfNoImprovement:
             logger.info(
                 f"Overwriting batch info because best_loss so far is {self.best_loss}, while this time we got an avg validation loss of {avg_loss}."
             )
-            trainer.completed_batches -= 1
-            trainer.completed_epochs -= 1
-            trainer.model = self.best_model
+            train_state.completed_batches -= 1
+            train_state.completed_epochs -= 1
+            train_state.model = self.best_model
         else:
-            self.best_model = trainer.model
+            self.best_model = train_state.model
             self.best_loss = avg_loss
 
 
-class CombineCallbacks:
-    def __init__(self, callbacks: list[Callable[[Trainer]]]):
-        self.callbacks = callbacks
+class TensorboardLoggingCallback:  # TODO add metrics
+    def __init__(self, val_data: DataLoader, log_path: str) -> None:
+        self.writer = SummaryWriter(log_dir=log_path)
+        self.val_data = val_data
 
-    def __call__(self, trainer: Trainer):
-        for cb in self.callbacks:
-            cb(trainer)
+    def after_step(self, train_state: Trainer):
+        self.writer.add_scalar(
+            "loss/train",
+            train_state.current_loss,
+            train_state.completed_epochs * train_state.max_epochs
+            + train_state.completed_batches,
+        )
+
+    def after_batch(self, train_state: Trainer) -> None:
+        train_state.model.eval()
+        for batch_idx, (x, y) in tqdm(
+            enumerate(self.data),
+            desc="Validation: Current Batch in Epoch",
+        ):
+            x = x.to(train_state._train_device)
+            y = y.to(train_state._train_device)
+
+            # calc model output and loss
+            pred = train_state.model(x)
+            loss += train_state.loss_fn(pred, y.long())
+
+        avg_loss = loss / batch_idx
+        self.writer.add_scalar(
+            "loss/train",
+            train_state.current_loss,
+            train_state.completed_epochs * train_state.max_epochs,
+        )
+        self.writer.add_scalar(
+            "loss/val", avg_loss, train_state.completed_epochs * train_state.max_epochs
+        )
+
+    def __del__(self):
+        self.writer.close()

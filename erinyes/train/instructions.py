@@ -41,7 +41,7 @@ class TrainingsInstructions:
         with pth_to_train_instructs.open("r") as train_file:
             train_data = yaml.safe_load(train_file)
             logger.info(f"found configuration {train_data}")
-            
+
         pth_to_arch_params = (
             Env.load().INST_DIR / "architecture" / f"{train_data['architecture']}.yaml"
         )
@@ -59,10 +59,15 @@ class TrainingsInstructions:
             split=Split.TRAIN,
             num_workers=rqmts.get("cpu", 0),
             gpu_available=True if rqmts.get("gpu") else False,
-            pack=train_data.get("pack_sequences", True)
+            pack=train_data.get("pack_sequences", True),
         )
         val_dataloader = get_data_loader(
-            pth_to_pp_output, batch_size=train_data["batch_size"], split=Split.VAL
+            pth_to_pp_output,
+            batch_size=train_data["batch_size"],
+            split=Split.VAL,
+            num_workers=rqmts.get("cpu", 0),
+            gpu_available=True if rqmts.get("gpu") else False,
+            pack=train_data.get("pack_sequences", True),
         )
 
         model = cls._get_model(

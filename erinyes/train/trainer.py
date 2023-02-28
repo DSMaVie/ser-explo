@@ -9,6 +9,7 @@ from typing import Callable
 
 import torch
 from torch import nn
+from torch.profiler import ProfilerActivity, profile, record_function
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from typing_extensions import Protocol
@@ -21,6 +22,14 @@ class OptimizerType(Protocol):
         ...
 
     def zero_grad(self):
+        ...
+
+
+class InTrainingCallback(Protocol):
+    def after_step(self, train_state: Trainer):
+        ...
+
+    def after_batch(self, train_state: Trainer):
         ...
 
 
@@ -37,8 +46,7 @@ class Trainer:
         model: nn.Module | None = None,
         train_data: DataLoader | None = None,
         gpu_available: bool = False,
-        after_epoch: Callable[[Trainer]] | None = None,
-        after_update: Callable[[Trainer]] | None = None,
+        callbacks: list[InTrainingCallback] | None = None,
     ):
         logger.info("initalizing trainer class")
         self.max_epochs = max_epochs
@@ -49,12 +57,12 @@ class Trainer:
         self.model = model
         self.train_data = train_data
 
+        self.current_loss
         self.completed_epochs = 0
         self.completed_batches = 0
         self._train_device = "cuda" if gpu_available else "cpu"
 
-        self.after_epoch = after_epoch
-        self.after_update = after_update
+        self.callbacks = callbacks
         logger.info("init of trainer done.")
 
     def fit(self):
@@ -86,26 +94,42 @@ class Trainer:
 
                 # calc model output and loss
                 pred = self.model(x)
-                loss = self.loss_fn(pred, y)
+                self.current_loss = self.loss_fn(pred, y)
 
                 # optimize
-                loss.backward()
+                self.current_loss.backward()
                 self.optimizer.step()
                 self.optimizer.zero_grad()
 
                 self.completed_batches = batch_idx
-                if self.after_update:
-                    self.after_update(self)
+                if self.callbacks:
+                    for cb in self.callbacks:
+                        cb.after_step(self)
 
             # reset batch number
             self.completed_epochs = epoch_idx
             self.save_state(self.save_pth / "last")
 
-            if self.after_epoch:
-                self.after_epoch(self)
+            if self.callbacks:
+                for cb in self.callbacks:
+                    cb.after_batch(self)
 
         logger.info("Finished training!")
         return self.model
+
+    def profile(self, data: DataLoader, log_path: str):
+        self.model.eval()
+        with profile(
+            activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+            record_shapes=True,
+            profile_memory=True,
+        ) as prof:
+            with record_function("model_inference"):
+                for x in data:
+                    self.model(x)
+
+            print(prof.key_averages().table(sort_by="self_cpu_memory_usage"))
+            prof.export_chrome_trace(log_path + "trace.json")
 
     def save_state(self, pth: Path):
         os.makedirs(pth, exist_ok=True)

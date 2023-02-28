@@ -22,7 +22,7 @@ class Wav2Vec(nn.Module):
         x = self.processor(x, sampling_rate=16e3, return_tensors="pt", padding=True)[
             "input_values"
         ].squeeze()
-        w2v_out = self.model(x).last_hidden_state
+        w2v_out = self.encoder(x).last_hidden_state
 
         if not self.classifier:
             return w2v_out

@@ -16,6 +16,7 @@ def serialize_preprocessed_data(
     feature_extractor: FeatureExtractor,
     label_encodec: LabelEncodec,
     target_col: str,
+    use_start_end: bool = True,
 ):
     if isinstance(out_pth, str):
         out_pth = Path(out_pth)
@@ -27,10 +28,10 @@ def serialize_preprocessed_data(
 
     with h5py.File(out_pth / "processed_data.h5", "w") as file:
         for _, row in tqdm(manifest.iterrows(), "Extracting and Encoding for Model..."):
-            start = row.start if "start" in row.index else 0
+            start = row.start if "start" in row.index and use_start_end else 0
             duration = (
                 row.end - row.start
-                if "start" in row.index and "end" in row.index
+                if "start" in row.index and "end" in row.index and use_start_end
                 else None
             )
             pth_to_file = next(src_path.rglob(f"*{row.file_idx}.*"))
