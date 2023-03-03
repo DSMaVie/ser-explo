@@ -18,6 +18,7 @@ class TrainJob(Job):
         pth_to_train_settings: tk.Path,
         rqmts: dict,
         pth_to_pretrained_model: tk.Path | None = None,
+        profile:bool=True
     ) -> None:
         super().__init__()
         logger.info("starting trainjob.")
@@ -27,6 +28,7 @@ class TrainJob(Job):
         self.pth_to_pretrained_model = pth_to_pretrained_model
 
         self.rqmts = rqmts
+        self.profile = profile
 
         self.out_pth = self.output_path("training")
 
@@ -74,5 +76,6 @@ class TrainJob(Job):
         trainer.profile(val_data, log_path=self.out_pth)
 
     def tasks(self):
-        yield Task("profile", rqmt=self.rqmts)
+        if self.profile:
+            yield Task("profile", rqmt=self.rqmts)
         yield Task("run", rqmt=self.rqmts)

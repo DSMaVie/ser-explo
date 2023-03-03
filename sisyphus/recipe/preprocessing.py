@@ -14,14 +14,16 @@ logger = logging.getLogger(__name__)
 
 
 class PreprocessingJob(Job):
-    def __init__(self, pth_to_instructions: tk.Path) -> None:
+    def __init__(self, pth_to_instructions: tk.Path, cache_data:bool = False) -> None:
         # parse to pathlib
         pth_to_instructions = Path(pth_to_instructions.get_path())
 
         logger.info(f"loading instructions from {pth_to_instructions}")
         self.instructions = PreproInstructions.from_yaml(pth_to_instructions)
+        self.cache_data = cache_data
 
         self.out_pth = self.output_path("", directory=True)
+
 
     def process_manifest(self):
         manifest_pth = (
@@ -61,6 +63,11 @@ class PreprocessingJob(Job):
             use_start_end= self.instructions.src != Dataset.IEM
         )
 
+    # def transfer_to_local:
+    #     self.sh()
+
     def tasks(self):
         yield Task("process_manifest")
         yield Task("finalize")
+        if self.cache_data:
+            yield Task("transfer_to_local")

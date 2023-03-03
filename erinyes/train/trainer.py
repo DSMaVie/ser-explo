@@ -6,6 +6,7 @@ import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
+import numpy as np
 
 import torch
 from torch import nn
@@ -57,7 +58,7 @@ class Trainer:
         self.model = model
         self.train_data = train_data
 
-        self.current_loss
+        self.current_loss = -np.inf
         self.completed_epochs = 0
         self.completed_batches = 0
         self._train_device = "cuda" if gpu_available else "cpu"
@@ -125,7 +126,7 @@ class Trainer:
             profile_memory=True,
         ) as prof:
             with record_function("model_inference"):
-                for x in data:
+                for x, y in data:
                     self.model(x)
 
             print(prof.key_averages().table(sort_by="self_cpu_memory_usage"))

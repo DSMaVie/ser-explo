@@ -14,17 +14,19 @@ logger = logging.getLogger(__name__)
 
 def run_w2v_baseline():
     pp_inst_dir = Env.load().INST_DIR / "pp" / "raw"
+    train_info = tk.Path(
+        str(Env.load().INST_DIR / "train" / f"{EXPERIMENT_NAME}.yaml"), hash_overwrite="train_info"
+    )
 
     model_dl_job = DownloadPretrainedModelJob("facebook/wav2vec2-base-960h")
     for pth in pp_inst_dir.rglob("*.yaml"):
         logger.info(f"Found instructions at {pth}. Starting Preprocessing for it.")
-        pp_job = PreprocessingJob(tk.Path(str(pth)))
 
+        pp_info = tk.Path(str(pth))
+        pp_job = PreprocessingJob(pp_info)
         tk.register_output(f"{EXPERIMENT_NAME}/{pth.stem}/processed", pp_job.out_pth)
+        # TODO: replace by report
 
-        train_info = tk.Path(
-            str(Env.load().INST_DIR / "train" / f"{EXPERIMENT_NAME}.yaml")
-        )
         train_job = TrainJob(
             pth_to_pp_output=pp_job.out_pth,
             pth_to_train_settings=train_info,
