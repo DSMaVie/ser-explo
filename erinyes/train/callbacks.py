@@ -8,6 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from erinyes.train.trainer import Trainer
+from erinyes.util.env import print_gpu_utilization
 
 logger = logging.getLogger(__name__)
 
@@ -74,8 +75,8 @@ class ResetStateIfNoImprovement:
 
 
 class TensorboardLoggingCallback:  # TODO add metrics
-    def __init__(self, val_data: DataLoader, log_path: str) -> None:
-        self.writer = SummaryWriter(log_dir=log_path)
+    def __init__(self, val_data: DataLoader, log_pth: str) -> None:
+        self.writer = SummaryWriter(log_dir=log_pth)
         self.val_data = val_data
 
     def after_step(self, train_state: Trainer):
@@ -111,3 +112,11 @@ class TensorboardLoggingCallback:  # TODO add metrics
 
     def __del__(self):
         self.writer.close()
+
+
+class TrackVRAMUsage():
+    def after_batch(self, _):
+        print_gpu_utilization()
+
+    def after_step(self, _):
+        return

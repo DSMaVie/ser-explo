@@ -90,6 +90,8 @@ class Trainer:
                 enumerate(self.train_data, start=self.completed_batches + 1),
                 desc="Current Batch in Epoch",
             ):
+                self.optimizer.zero_grad()
+
                 x = x.to(self._train_device)
                 y = y.to(self._train_device)
 
@@ -100,7 +102,6 @@ class Trainer:
                 # optimize
                 self.current_loss.backward()
                 self.optimizer.step()
-                self.optimizer.zero_grad()
 
                 self.completed_batches = batch_idx
                 if self.callbacks:

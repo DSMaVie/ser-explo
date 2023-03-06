@@ -67,7 +67,7 @@ class PreprocessingJob(Job):
     #     self.sh()
 
     def tasks(self):
-        yield Task("process_manifest")
-        yield Task("finalize")
+        yield Task("process_manifest", mini_task=True)
+        yield Task("finalize", mini_task=True)
         if self.cache_data:
-            yield Task("transfer_to_local")
+            yield Task("transfer_to_local", mini_task=True)

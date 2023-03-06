@@ -61,6 +61,7 @@ class TrainingsInstructions:
             gpu_available=True if rqmts.get("gpu") else False,
             pack=train_data.get("pack_sequences", True),
         )
+
         val_dataloader = get_data_loader(
             pth_to_pp_output,
             batch_size=train_data["batch_size"],

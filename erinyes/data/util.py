@@ -1,6 +1,6 @@
 from __future__ import annotations
-from functools import partial
 
+from functools import partial
 from pathlib import Path
 
 import torch
@@ -12,7 +12,7 @@ from erinyes.util.enums import Split
 
 
 def collate_with_pack_pad_to_batch(
-    data: list[tuple[torch.TensorType, torch.TensorType]], pack:bool=True
+    data: list[tuple[torch.TensorType, torch.TensorType]], pack: bool = True
 ) -> tuple[torch.TensorType, torch.TensorType]:
     signals, labels = zip(*sorted(data, key=lambda x: len(x[0]), reverse=True))
 
@@ -20,9 +20,7 @@ def collate_with_pack_pad_to_batch(
 
     if pack:
         orig_lengths = torch.Tensor([signal.shape[0] for signal in signals])
-        seqs = pack_padded_sequence(
-            seqs, lengths=orig_lengths, batch_first=True
-        )
+        seqs = pack_padded_sequence(seqs, lengths=orig_lengths, batch_first=True)
 
     labels = torch.stack(labels).squeeze()
     return seqs, labels
@@ -34,11 +32,9 @@ def get_data_loader(
     split: Split,
     num_workers: int = 0,
     gpu_available: bool = False,
-    pack: bool = True
+    pack: bool = True,
 ):
-    dataset = Hdf5Dataset(
-        data_path / "processed_data.h5", split=split
-    )
+    dataset = Hdf5Dataset(data_path / "processed_data.h5", split=split, load_data=True)
     sampler = SubsetRandomSampler(dataset.get_indices())
     return DataLoader(
         dataset,

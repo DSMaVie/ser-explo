@@ -23,7 +23,7 @@ class Wav2Vec(nn.Module):
         #     "input_values"
         # ].squeeze()
         w2v_out = self.encoder(x).last_hidden_state
-        w2v_out = torch.stack(w2v_out)
+        # w2v_out = torch.stack(w2v_out)
 
         if not self.classifier:
             return w2v_out
