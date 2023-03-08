@@ -3,6 +3,7 @@ import logging
 from recipe.data_analysis import DataAnalysisJob
 from recipe.download_pt_model import DownloadPretrainedModelJob
 from recipe.preprocessing import PreprocessingJob
+from recipe.train import TrainJob
 
 from erinyes.util.env import Env
 from sisyphus import tk
@@ -32,15 +33,15 @@ def run_w2v_baseline():
 
         pp_ana_job = DataAnalysisJob(pp_info, pp_job.out_pth)
         tk.register_report(
-            f"transcript_data_{pth.stem}", pp_ana_job.transcript_data
+            f"{EXPERIMENT_NAME}/{pth.stem}/processed/stats.txt", pp_ana_job.stats
         )
-        tk.register_report(f"priors_{pth.stem}", pp_ana_job.priors)
 
-        #     pth_to_pp_output=pp_job.out_pth,
-        #     pth_to_train_settings=train_info,
-        #     pth_to_pretrained_model=model_dl_job.out,
-        #     rqmts={"cpu": 4, "mem": 48, "gpu": 1, "time": 10},
-        #     profile_first=False,
-        # )
+        train_job = TrainJob(
+            pth_to_pp_output=pp_job.out_pth,
+            pth_to_train_settings=train_info,
+            pth_to_pretrained_model=model_dl_job.out,
+            rqmts={"cpu": 4, "mem": 16, "gpu": 1, "time": 10},
+            profile_first=False,
+        )
 
-        # tk.register_output(f"{EXPERIMENT_NAME}/{pth.stem}/trained", train_job.out_pth)
+        tk.register_output(f"{EXPERIMENT_NAME}/{pth.stem}/trained", train_job.out_pth)

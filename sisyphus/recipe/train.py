@@ -50,6 +50,7 @@ class TrainJob(Job):
             model=model,
             train_data=train_data,
             save_pth=Path(self.out_pth),
+            gpu_available= True if self.rqmts.get("gpu") else False,
             callbacks=[
                 SaveBestLoss(val_data=val_data),
                 ResetStateIfNoImprovement(val_data=val_data),

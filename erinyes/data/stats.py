@@ -24,49 +24,101 @@ class DataAnalyzer:
         self.pp_instructions = pp_instructions
         self.metrics = metrics
 
+    def load_data(self):
         self.data = pd.read_csv(self.data_src / "manifest.csv", index_col=None)
 
-    def _calc_priors(self, data: pd.DataFrame):
-        return data[self.pp_instructions.label_target].value_counts(normalize=True)
+    def _prior_stats(self, data: pd.DataFrame):
+        assert hasattr(self, "data"), "data needs to be loaded first!"
+        # TODO: handle mhe case
+        priors = data[self.pp_instructions.label_target].value_counts(normalize=True)
+        return priors.add_prefix("prior_")
 
-    def _calc_words(self, data: pd.DataFrame):
-        word_count = data["transcript"].str.split(" ").apply(len)
-        uniques = data["transcript"].str.split(" ").apply(np.unique).apply(len)
-        vocab_size = len(np.unique(np.stack(data["transcript"].values)))
+    def _time_stats(self, data: pd.DataFrame):
+        if "start" in data.columns:
+            dur = data["end"] - data["start"]
+        else:
+            dur = data["duration"]
+
+        return pd.Series(
+            {
+                "total duration": dur.sum() / 60 / 60,
+                "avg duration per utterance": dur.mean(),
+            }
+        )
+
+    def _word_stats(self, data: pd.DataFrame):
+        assert hasattr(self, "data"), "data needs to be loaded first!"
+
+        text_keyword = "transcript" if "transcript" in data.columns else "Statement"
+
+        word_count = data[text_keyword].str.split(" ").apply(len)
 
         return pd.Series(
             {
                 "words total": word_count.sum(),
                 "avg words per utterance": word_count.mean(),
-                "avg unique words per utterance": uniques.mean(),
                 "max words per utterance": word_count.max(),
-                "max unique words per utterance": uniques.max(),
                 "min words per utterance": word_count.min(),
-                "min unique words per utterance": uniques.min(),
-                "vocabulary size": vocab_size,
                 "number utterances": len(data),
             }
         )
 
+    def _vocab_stats(self, data: pd.DataFrame):
+        assert hasattr(self, "data"), "data needs to be loaded first!"
+
+        text_keyword = "transcript" if "transcript" in data.columns else "Statement"
+        uniques = data[text_keyword].str.split(" ").values
+        uniques = [set(t) for t in uniques]
+        unique_lens = [len(s) for s in uniques]
+
+        return pd.Series(
+            {
+                "avg unique words per utterance": np.mean(unique_lens),
+                "max unique words per utterance": np.max(unique_lens),
+                "min unique words per utterance": np.min(unique_lens),
+                "vocabulary size": len(set.union(*uniques)),
+            }
+        )
+
     def compute_stats(self):
-        priors = {}
-        transcript_data = {}
+        stats = {
+            "total": pd.concat(
+                [
+                    self._time_stats(self.data),
+                    self._prior_stats(self.data),
+                    self._word_stats(self.data),
+                    self._vocab_stats(self.data),
+                ]
+            )
+        }
+
         for split in Split:
             data = self.data.query(f"split == {split.name.lower()!r}")
 
-            priors.update({split.name.lower(): self._calc_priors(data)})
-            transcript_data.update({split.name.lower(): self._calc_words(data)})
+            stats.update(
+                {
+                    split.name.lower(): pd.concat(
+                        [
+                            self._time_stats(data),
+                            self._prior_stats(data),
+                            self._word_stats(data),
+                            self._vocab_stats(data),
+                        ]
+                    )
+                }
+            )
 
-        return pd.DataFrame(priors), pd.DataFrame(transcript_data)
+        return pd.DataFrame(stats)
 
     def compute_prior_metrics(self, priors: pd.Series):
         split_wise_results = {}
 
         for split in Split:
-            priors = priors.loc[split.name.lower()]
+            priors = priors[split.name.lower()]
             max_prior_emotions = [
                 emo for emo in priors.index if priors.loc[emo] == priors.max()
             ]
+            priors.index.str.removeprefix("prior_")
 
             results = {}
             trues = self.data.query(f"split == {split.name.lower()!r}")[

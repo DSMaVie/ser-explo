@@ -6,8 +6,8 @@ import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
-import numpy as np
 
+import numpy as np
 import torch
 from torch import nn
 from torch.profiler import ProfilerActivity, profile, record_function
@@ -27,10 +27,10 @@ class OptimizerType(Protocol):
 
 
 class InTrainingCallback(Protocol):
-    def after_step(self, train_state: Trainer):
+    def after_batch(self, train_state: Trainer):
         ...
 
-    def after_batch(self, train_state: Trainer):
+    def after_epoch(self, train_state: Trainer):
         ...
 
 
@@ -76,7 +76,8 @@ class Trainer:
         logger.info(f"using model of class {self.model.__class__}")
         self.model.train()
         self.model.to(device=self._train_device)
-        logger.info("send model to gpu")
+        if "cuda" in self._train_device:
+            logger.info("send model to gpu")
 
         logger.info("starting training!")
         for epoch_idx in tqdm(
@@ -104,17 +105,17 @@ class Trainer:
                 self.optimizer.step()
 
                 self.completed_batches = batch_idx
-                if self.callbacks:
-                    for cb in self.callbacks:
-                        cb.after_step(self)
+                # if self.callbacks:
+                #     for cb in self.callbacks:
+                #         cb.after_batch(self)
 
             # reset batch number
             self.completed_epochs = epoch_idx
             self.save_state(self.save_pth / "last")
 
-            if self.callbacks:
-                for cb in self.callbacks:
-                    cb.after_batch(self)
+            # if self.callbacks:
+            #     for cb in self.callbacks:
+            #         cb.after_epoch(self)
 
         logger.info("Finished training!")
         return self.model

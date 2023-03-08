@@ -18,7 +18,10 @@ class SaveBestLoss:
         self.data = val_data
         self.best_loss = -np.inf
 
-    def after_batch(self, train_state: Trainer):
+    def after_batch(self, _):
+        return
+
+    def after_epoch(self, train_state: Trainer):
         train_state.model.eval()
         loss = -np.inf
         for batch_idx, (x, y) in tqdm(
@@ -44,7 +47,11 @@ class ResetStateIfNoImprovement:
         self.best_loss = -np.inf
         self.best_model = None
 
-    def after_loss(self, train_state: Trainer):
+
+        def after_batch(self, _):
+            return
+
+    def after_epoch(self, train_state: Trainer):
         train_state.model.eval()
         loss = -np.inf
         for batch_idx, (x, y) in tqdm(
@@ -79,7 +86,7 @@ class TensorboardLoggingCallback:  # TODO add metrics
         self.writer = SummaryWriter(log_dir=log_pth)
         self.val_data = val_data
 
-    def after_step(self, train_state: Trainer):
+    def after_batch(self, train_state: Trainer):
         self.writer.add_scalar(
             "loss/train",
             train_state.current_loss,
@@ -87,7 +94,7 @@ class TensorboardLoggingCallback:  # TODO add metrics
             + train_state.completed_batches,
         )
 
-    def after_batch(self, train_state: Trainer) -> None:
+    def after_epoch(self, train_state: Trainer) -> None:
         train_state.model.eval()
         for batch_idx, (x, y) in tqdm(
             enumerate(self.data),

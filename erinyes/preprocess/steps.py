@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import logging
 from enum import Enum
+from fileinput import filename
+from pathlib import Path
 
+import librosa
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -247,7 +250,7 @@ class FileSplitter:
             logger.info(f"reading file {file}")
             with file.open("r") as f:
                 lines = f.readlines()
-                lines = [l.strip()for l in lines]
+                lines = [l.strip() for l in lines]
                 lines = [l.split("/") if "/" in l else l for l in lines]
                 if isinstance(lines[0], str):  # no two keys
                     new_entry = {l: split for l in lines}
@@ -322,6 +325,19 @@ class AverageConsolidator:
         return data_trunc.reset_index()
 
 
+class GatherDurations:
+    def __init__(self, pth: Path, filetype: str) -> None:
+        self.pth = Env.load().RAW_DIR / pth
+        self.type = filetype
+
+    def run(self, data: pd.DataFrame):
+        # only intended for entire files!
+        data["duration"] = data.file_idx.apply(
+            lambda idx: librosa.get_duration(filename=self.pth / f"{idx}.{self.type}")
+        )
+        return data
+
+
 class PreproFuncs(Enum):
     normalize_labels = LabelNormalizer
     filter_emotions = EmotionFilterNFold
@@ -329,3 +345,4 @@ class PreproFuncs(Enum):
     produce_splits_based_on_files = FileSplitter
     consolidate_per_agreement = AgreementConsolidator
     consolidate_with_average = AverageConsolidator
+    gather_durations = GatherDurations

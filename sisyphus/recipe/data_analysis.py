@@ -24,18 +24,17 @@ class DataAnalysisJob(Job):
             },
         )
 
-        self.priors = self.output_var("priors")
-        self.transcript_data = self.output_var("transcript_data")
+        self.stats = self.output_var("stats")
         # self.raw_metrics = self.output_var("raw_metrics")
 
     def run(self):
-        priors, stats = self.analyzer.compute_stats()
-        # result = self.analyzer.compute_prior_metrics(priors) #still a bot faulty
+        self.analyzer.load_data()
+        stats = self.analyzer.compute_stats()
+        # result = self.analyzer.compute_prior_metrics(priors) #still a bit faulty
         # logger.info(f"got results {result}")
 
         # self.raw_metrics.set(result)
-        self.priors.set(priors.to_string())
-        self.transcript_data.set(stats.to_string())
+        self.stats.set(stats.to_string())
 
     def tasks(self):
         yield Task("run", mini_task=True)

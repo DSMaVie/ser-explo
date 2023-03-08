@@ -19,29 +19,33 @@ class Hdf5Dataset(Dataset):
 
         self.src_path = src_path
         self.split = split
-        self.cache = (
-            {
-                idx: self.__getitem__(idx, from_disk=True)
-                for idx in tqdm(self.get_indices(), desc="loading all data")
-            }
-            if load_data
-            else None
-        )
+        # self.cache = (
+        #     {
+        #         idx: self.__getitem__(idx, from_disk=True)
+        #         for idx in tqdm(self.get_indices(), desc="loading all data")
+        #     }
+        #     if load_data
+        #     else None
+        # )
+
+
 
     def __len__(self):
         with h5py.File(self.src_path, "r") as file:
             return len(file[self.split.name.lower()].keys())
 
     def __getitem__(self, idx: str, from_disk: bool = False) -> torch.TensorType:
-        if not from_disk and self.cache:
-            return self.cache[idx]
+        # logger.info(f"loading from index {idx}")
+        # if not from_disk and self.cache:
+        #     return self.cache[idx]
 
         with h5py.File(self.src_path, "r") as file:
             node = file[f"{self.split.name.lower()}/{idx}"]
             labels = torch.Tensor(node.attrs["label"])
-            features = torch.Tensor(node[()])
+            features = torch.Tensor(node[:])
 
             return features, labels
+
 
     def get_indices(self):
         keys = []

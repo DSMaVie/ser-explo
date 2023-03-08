@@ -18,6 +18,10 @@ steps:
         train: 1..18
         val: 19
         test: 20,21,22,23,24
+    - name: gather_durations
+      args:
+        pth: rav
+        filetype: wav
 features:
     name: normedraw
     args:

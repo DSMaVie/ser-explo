@@ -14,15 +14,17 @@ from erinyes.util.enums import Split
 def collate_with_pack_pad_to_batch(
     data: list[tuple[torch.TensorType, torch.TensorType]], pack: bool = True
 ) -> tuple[torch.TensorType, torch.TensorType]:
-    signals, labels = zip(*sorted(data, key=lambda x: len(x[0]), reverse=True))
+    if pack:
+        data = sorted(data, key=lambda x: len(x[0]), reverse=True)
 
+    signals, labels = zip(*data)
     seqs = pad_sequence(signals, batch_first=True)
 
     if pack:
         orig_lengths = torch.Tensor([signal.shape[0] for signal in signals])
         seqs = pack_padded_sequence(seqs, lengths=orig_lengths, batch_first=True)
 
-    labels = torch.stack(labels).squeeze()
+    labels = torch.stack(labels).squeeze(dim=1)
     return seqs, labels
 
 
