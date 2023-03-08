@@ -51,7 +51,8 @@ class DataAnalyzer:
 
         text_keyword = "transcript" if "transcript" in data.columns else "Statement"
 
-        word_count = data[text_keyword].str.split(" ").apply(len)
+        word_lists= data[text_keyword].str.split(" ").dropna()
+        word_count = word_lists.apply(len)
 
         return pd.Series(
             {
@@ -67,7 +68,7 @@ class DataAnalyzer:
         assert hasattr(self, "data"), "data needs to be loaded first!"
 
         text_keyword = "transcript" if "transcript" in data.columns else "Statement"
-        uniques = data[text_keyword].str.split(" ").values
+        uniques = data[text_keyword].str.split(" ").dropna().values
         uniques = [set(t) for t in uniques]
         unique_lens = [len(s) for s in uniques]
 

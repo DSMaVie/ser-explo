@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from erinyes.data.stats import DataAnalyzer
+from erinyes.preprocess.stats import DataAnalyzer
 from erinyes.inference.metrics import BalancedEmotionErrorRate, EmotionErrorRate
 from erinyes.preprocess.instructions import PreproInstructions
 from sisyphus import Job, Task, tk
