@@ -1,0 +1,31 @@
+src: RAV
+steps:
+    - name: normalize_labels
+      args:
+        target: &target_col Emotion
+    - name: filter_emotions
+      args:
+        keep: &ekman
+        - Happiness
+        - Anger
+        - Sadness
+        - Fear
+        - Disgust
+        - Surprise
+    - name: produce_conditional_splits
+      args:
+        src_col: Actor
+        train: 1..18
+        val: 19
+        test: 20,21,22,23,24
+    - name: gather_durations
+      args:
+        pth: rav
+        filetype: wav
+features:
+    name: w2v_extraction
+    download_location:
+labels:
+    name: int
+    classes: *ekman
+    target_in_manifest: *target_col

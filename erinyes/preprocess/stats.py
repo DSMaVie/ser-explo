@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from erinyes.inference.metrics import Metric
-from erinyes.preprocess.instructions import PreproInstructions
+from erinyes.preprocess.processor import PreproInstructions
 from erinyes.util.enums import Split
 
 logger = logging.getLogger(__name__)
@@ -17,11 +17,11 @@ class DataAnalyzer:
     def __init__(
         self,
         data_src: Path,
-        pp_instructions: PreproInstructions,
+        label_col:str,
         metrics: dict[str, Metric],
     ):
         self.data_src = data_src
-        self.pp_instructions = pp_instructions
+        self.label_col = label_col
         self.metrics = metrics
 
     def load_data(self):
@@ -30,7 +30,7 @@ class DataAnalyzer:
     def _prior_stats(self, data: pd.DataFrame):
         assert hasattr(self, "data"), "data needs to be loaded first!"
         # TODO: handle mhe case
-        priors = data[self.pp_instructions.label_target].value_counts(normalize=True)
+        priors = data[self.label_col].value_counts(normalize=True)
         return priors.add_prefix("prior_")
 
     def _time_stats(self, data: pd.DataFrame):
@@ -43,6 +43,8 @@ class DataAnalyzer:
             {
                 "total duration": dur.sum() / 60 / 60,
                 "avg duration per utterance": dur.mean(),
+                "max duration per utterance": dur.max(),
+                "min duration per utterance": dur.min()
             }
         )
 

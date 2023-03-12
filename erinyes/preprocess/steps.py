@@ -105,42 +105,10 @@ class ConditionalSplitter:
                 raise ValueError(f"key {key} not in {allowed_kwargs}!")
 
             split = Split[key.upper()]
-            vals = self.parse_str_values(val)
-            self.splits.update({split: vals})
+            self.splits.update({split: val})
 
         if Split.TRAIN not in self.splits:
             raise ValueError("At least the train split must be set!")
-
-    @staticmethod
-    def parse_str_values(val: str | int):
-        vals = None
-        no_spread = True
-        no_commasep = True
-
-        if isinstance(val, int):
-            return [val]
-
-        # check for spread
-        deconst_val = val.split("..")
-        if len(deconst_val) == 2:
-            start, stop = deconst_val
-            vals = np.arange(int(start), int(stop) + 1)  # +1 to make the end inclusive
-        else:
-            no_spread = False
-
-        # check for commasep list
-        deconst_val = val.split(",")
-        deconst_val = [s.strip() for s in deconst_val]
-        if len(deconst_val) > 1:
-            vals = [int(s) for s in deconst_val]
-        else:
-            no_commasep = False
-
-        # check for single value
-        if no_commasep and no_spread:
-            vals = [int(val)]
-
-        return vals
 
     def run(self, data: pd.DataFrame) -> pd.DataFrame:
         tqdm.pandas(desc="Calculating Splits for Dataset.")
@@ -338,11 +306,8 @@ class GatherDurations:
         return data
 
 
-class PreproFuncs(Enum):
-    normalize_labels = LabelNormalizer
-    filter_emotions = EmotionFilterNFold
-    produce_conditional_splits = ConditionalSplitter
-    produce_splits_based_on_files = FileSplitter
-    consolidate_per_agreement = AgreementConsolidator
-    consolidate_with_average = AverageConsolidator
-    gather_durations = GatherDurations
+class TransformStartStopToDurations:
+    def run(self,data:pd.DataFrame) -> pd.DataFrame:
+        data["duration"] = data.end - data.start
+        data = data.drop(["start", "end"])
+        return data

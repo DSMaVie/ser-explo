@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from enum import Enum
 from pathlib import Path
 
 import librosa
@@ -7,10 +8,6 @@ import numpy as np
 
 
 class FeatureExtractor(ABC):
-    def __init__(self, **additional_args) -> None:
-        super().__init__()
-        self.additional_args = additional_args
-
     @abstractmethod
     def __apply__(self, signal: np.ndarray, sr: int) -> np.ndarray:
         """should be overloaded"""
@@ -35,6 +32,11 @@ class FeatureExtractor(ABC):
 
 
 class LogMelSpec(FeatureExtractor):
+    def __init__(self, n_mels: int) -> None:
+        super().__init__()
+
+        self.n_mels = n_mels
+
     def __apply__(self, signal: np.ndarray, sr: int) -> np.ndarray:
         """output shape is TxF"""
         return librosa.feature.melspectrogram(y=signal, sr=sr, **self.additional_args).T
@@ -44,19 +46,21 @@ class LogMelSpec(FeatureExtractor):
 
 
 class NormalizedRawAudio(FeatureExtractor):
+    def __init__(self, resample_to: int | None = None, use_znorm: bool = False) -> None:
+        super().__init__()
+
+        self.resample_to = resample_to
+        self.use_znorm = use_znorm
+
     def __apply__(self, signal: np.ndarray, sr: int) -> np.ndarray:
-        mu = np.mean(signal)
-        sig = np.std(signal)
-        if self.additional_args["resample_to"]:
-            signal = librosa.resample(
-                signal, orig_sr=sr, target_sr=self.additional_args["resample_to"]
-            )
-        return (signal - mu) / sig
+        if self.resample_to:
+            signal = librosa.resample(signal, orig_sr=sr, target_sr=self.resample_to)
+
+        if self.use_znorm:
+            mu = np.mean(signal)
+            sig = np.std(signal)
+            return (signal - mu) / sig
+        return signal
 
     def get_feature_dim(self):
         return 1
-
-
-class FeatureExtractors(Enum):
-    logmelspec = LogMelSpec
-    normedraw = NormalizedRawAudio

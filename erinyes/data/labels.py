@@ -1,49 +1,80 @@
 from __future__ import annotations
 
-import numpy as np
+from abc import ABC, abstractmethod
+from typing import Generic, TypeVar
+
+LabelType = TypeVar("LabelType")
+EncLabelType = TypeVar("EncLabelType")
 
 
-class LabelEncodec:
-    def __init__(self, classes: list[str], NofN: bool = False) -> None:
-        self.NofN = NofN
+class LabelEncodec(ABC, Generic[LabelType, EncLabelType]):
+    @abstractmethod
+    def encode(self, label: LabelType) -> EncLabelType:
+        ...
+
+    @abstractmethod
+    def decode(self, label: EncLabelType) -> LabelType:
+        ...
+
+    def batch_encode(self, label_list: list[LabelType]) -> list[EncLabelType]:
+        return [self.encode(label) for label in label_list]
+
+    def batch_decode(self, enc_label_list: list[EncLabelType]) -> list[LabelType]:
+        return [self.decode(enc_label) for enc_label in enc_label_list]
+
+
+class IntEncodec(LabelEncodec[str, int]):
+    def __init__(self, classes: list[str]) -> None:
         self.classes = classes
 
-    def __ints2mhe(self, n_list: list[int]) -> np.ndarray:
-        mhe_class = np.zeros(len(self.classes), dtype=np.int8)
-        mhe_class[n_list] = 1
-        return mhe_class
+    def encode(self, label: str) -> int:
+        return self.classes.index(label)
 
-    def __str2int(self, s: str) -> int:
-        return self.classes.index(s)
+    def decode(self, enc_label: int) -> str:
+        return self.classes[enc_label]
 
-    def __int2str(self, n: int) -> str:
-        return self.classes[n]
 
-    def __mhe2ints(self, mhe_label: list[int]) -> int:
-        return np.where(mhe_label == 1)
+# class LabelEncodec:
+#     def __init__(self, classes: list[str], NofN: bool = False) -> None:
+#         self.NofN = NofN
+#         self.classes = classes
 
-    def encode(self, label: str) -> np.ndarray:
-        if self.NofN:
-            n_list = [self.__str2int(lab) for lab in label.split(".")]
-            return self.__ints2mhe(n_list)
-        else:
-            return np.array([self.__str2int(label)])
+#     def __ints2mhe(self, n_list: list[int]) -> np.ndarray:
+#         mhe_class = np.zeros(len(self.classes), dtype=np.int8)
+#         mhe_class[n_list] = 1
+#         return mhe_class
 
-    def decode(self, label: int | list[int]) -> str:
-        if self.NofN and not isinstance(label, list):
-            raise TypeError("Expected list of values to decode!")
-        elif not self.NofN and isinstance(label):
-            raise TypeError("Did not expect label to be of type list!")
+#     def __str2int(self, s: str) -> int:
+#         return self.classes.index(s)
 
-        if self.NofN:
-            n_list = self.__mhe2ints(label)
-            str_list = [self.__int2str(n) for n in n_list]
-            return ".".join(str_list)
+#     def __int2str(self, n: int) -> str:
+#         return self.classes[n]
 
-        return self.__int2str(label)
+#     def __mhe2ints(self, mhe_label: list[int]) -> int:
+#         return np.where(mhe_label == 1)
 
-    def get_class_dim(self):
-        return len(self.classes)
+#     def encode(self, label: str) -> np.ndarray:
+#         if self.NofN:
+#             n_list = [self.__str2int(lab) for lab in label.split(".")]
+#             return self.__ints2mhe(n_list)
+#         else:
+#             return np.array([self.__str2int(label)])
 
-    def get_is_mhe(self):
-        return self.NofN
+#     def decode(self, label: int | list[int]) -> str:
+#         if self.NofN and not isinstance(label, list):
+#             raise TypeError("Expected list of values to decode!")
+#         elif not self.NofN and isinstance(label):
+#             raise TypeError("Did not expect label to be of type list!")
+
+#         if self.NofN:
+#             n_list = self.__mhe2ints(label)
+#             str_list = [self.__int2str(n) for n in n_list]
+#             return ".".join(str_list)
+
+#         return self.__int2str(label)
+
+#     def get_class_dim(self):
+#         return len(self.classes)
+
+#     def get_is_mhe(self):
+#         return self.NofN

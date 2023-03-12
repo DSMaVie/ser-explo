@@ -145,8 +145,7 @@ class Trainer:
                 "loss_fn": self.loss_fn,
                 "optimizer": self.optimizer,
                 "max_epochs": self.max_epochs,
-                "after_epoch": self.after_epoch,
-                "after_update": self.after_update,
+                "callbacks": self.callbacks
             },
             pth / "train_state.pt",
         )

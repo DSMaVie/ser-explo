@@ -2,8 +2,8 @@ import logging
 
 from recipe.data_analysis import DataAnalysisJob
 from recipe.download_pt_model import DownloadPretrainedModelJob
-from recipe.preprocessing import PreprocessingJob
-from recipe.train import TrainJob
+from recipe.preprocessing.ie4_w2v_clf import IEM4ProcessorForWav2Vec2
+from recipe.preprocessing.rav_w2v_clf import RavdessW2VPreproJob
 
 from erinyes.util.env import Env
 from sisyphus import tk
@@ -11,30 +11,29 @@ from sisyphus import tk
 # from recipe.train import TrainJob
 
 
+logger = logging.getLogger(__name__)
+
 EXPERIMENT_NAME = "w2v_baselines"
 
-logger = logging.getLogger(__name__)
+DATA_CONDITIONS = [RavdessW2VPreproJob, IEM4ProcessorForWav2Vec2]
+MODELS = ["w2v_pooled_clf"]
 
 
 def run_w2v_baseline():
-    pp_inst_dir = Env.load().INST_DIR / "pp" / "raw"
-    train_info = tk.Path(
-        str(Env.load().INST_DIR / "train" / f"{EXPERIMENT_NAME}.yaml"),
-        hash_overwrite="train_info",
-    )
+    model_dl_job = DownloadPretrainedModelJob(
+        "jonatasgrosman/wav2vec2-large-xlsr-53-english"
+    )  # wav2vec2 xlsr ft on asr english (commonvoice)
 
-    model_dl_job = DownloadPretrainedModelJob("facebook/wav2vec2-base-960h")
-    for pth in pp_inst_dir.rglob("*.yaml"):
-        logger.info(f"Found instructions at {pth}. Starting Preprocessing for it.")
-
-        pp_info = tk.Path(str(pth))
-        pp_job = PreprocessingJob(pp_info)
-        tk.register_output(f"{EXPERIMENT_NAME}/{pth.stem}/processed", pp_job.out_pth)
-
-        pp_ana_job = DataAnalysisJob(pp_info, pp_job.out_pth)
-        tk.register_report(
-            f"{EXPERIMENT_NAME}/{pth.stem}/processed/stats.txt", pp_ana_job.stats
+    for data_pp_job in DATA_CONDITIONS:
+        pp_job = data_pp_job()
+        logger.info(
+            f"Loading PPJob for data condition {pp_job.name}. Starting Preprocessing for it."
         )
+        tk.register_output(f"{EXPERIMENT_NAME}/{pp_job.name}/data", pp_job.out_pth)
+
+        logger.info(f"loading analysis_job for {pp_job.name}")
+        pp_ana_job = DataAnalysisJob(pp_info, pp_job.out_pth)
+        tk.register_report(f"{EXPERIMENT_NAME}/{dc}/data_stats.txt", pp_ana_job.stats)
 
         # train_job = TrainJob(
         #     pth_to_pp_output=pp_job.out_pth,

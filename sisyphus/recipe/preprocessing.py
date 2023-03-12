@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import logging
 import pickle
 from pathlib import Path
 
 import pandas as pd
 
-from erinyes.preprocess.instructions import PreproInstructions
+from erinyes.preprocess.processor import PreproInstructions
 from erinyes.preprocess.serialization import serialize_preprocessed_data
 from erinyes.util.enums import Dataset
 from erinyes.util.env import Env
@@ -14,16 +16,22 @@ logger = logging.getLogger(__name__)
 
 
 class PreprocessingJob(Job):
-    def __init__(self, pth_to_instructions: tk.Path, cache_data:bool = False) -> None:
-        # parse to pathlib
-        pth_to_instructions = Path(pth_to_instructions.get_path())
-
+    def __init__(
+        self,
+        pth_to_instructions: tk.Path,
+        pth_to_download: tk.Path | None = None,
+        cache_data: bool = False,
+    ) -> None:
         logger.info(f"loading instructions from {pth_to_instructions}")
-        self.instructions = PreproInstructions.from_yaml(pth_to_instructions)
+        self.instructions = PreproInstructions.from_yaml(
+            pth_to_instructions=Path(pth_to_instructions.get_path()),
+            pth_to_predownload=Path(pth_to_download.get_path())
+            if pth_to_download
+            else None,
+        )
         self.cache_data = cache_data
 
         self.out_pth = self.output_path("", directory=True)
-
 
     def process_manifest(self):
         manifest_pth = (
@@ -60,7 +68,7 @@ class PreprocessingJob(Job):
             feature_extractor=fe,
             label_encodec=le,
             target_col=self.instructions.label_target,
-            use_start_end= self.instructions.src != Dataset.IEM
+            use_start_end=self.instructions.src != Dataset.IEM,
         )
 
     # def transfer_to_local:
