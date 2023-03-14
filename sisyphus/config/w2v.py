@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 EXPERIMENT_NAME = "w2v_baselines"
 
-DATA_CONDITIONS = [RavdessW2VPreproJob, IEM4ProcessorForWav2Vec2]
+DATA_CONDITIONS = {RavdessW2VPreproJob, IEM4ProcessorForWav2Vec2}
 MODELS = ["w2v_pooled_clf"]
 
 
@@ -27,20 +27,25 @@ def run_w2v_baseline():
     for data_pp_job in DATA_CONDITIONS:
         pp_job = data_pp_job()
         logger.info(
-            f"Loading PPJob for data condition {pp_job.name}. Starting Preprocessing for it."
+            f"Loading PPJob for data condition {pp_job.processor.name}. Starting Preprocessing for it."
         )
-        tk.register_output(f"{EXPERIMENT_NAME}/{pp_job.name}/data", pp_job.out_pth)
+        tk.register_output(
+            f"{EXPERIMENT_NAME}/{pp_job.processor.name}/data", pp_job.out_path
+        )
 
-        logger.info(f"loading analysis_job for {pp_job.name}")
-        pp_ana_job = DataAnalysisJob(pp_info, pp_job.out_pth)
-        tk.register_report(f"{EXPERIMENT_NAME}/{dc}/data_stats.txt", pp_ana_job.stats)
+        logger.info(f"loading analysis_job for {pp_job.processor.name}")
+        pp_ana_job = DataAnalysisJob(pp_job.out_path, pp_job.label_column)
+        tk.register_report(
+            f"{EXPERIMENT_NAME}/{pp_job.processor.name}/data_stats.txt",
+            pp_ana_job.stats,
+        )
 
         # train_job = TrainJob(
-        #     pth_to_pp_output=pp_job.out_pth,
+        #     pth_to_pp_output=pp_job.out_path,
         #     pth_to_train_settings=train_info,
         #     pth_to_pretrained_model=model_dl_job.out,
         #     rqmts={"cpu": 2, "mem": 16, "gpu": 1, "time": 10},
         #     profile_first=False,
         # )
 
-        # tk.register_output(f"{EXPERIMENT_NAME}/{pth.stem}/trained", train_job.out_pth)
+        # tk.register_output(f"{EXPERIMENT_NAME}/{pth.stem}/trained", train_job.out_path)

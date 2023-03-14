@@ -8,8 +8,8 @@ from typing import Generic, Protocol, TypeVar
 import h5py
 import numpy as np
 import pandas as pd
+import torch
 from tqdm import tqdm
-
 
 from erinyes.data.labels import LabelEncodec
 from erinyes.util.enums import Dataset
@@ -52,7 +52,6 @@ class Preprocessor:
     feature_extractor: PreproTask[FeatureExtractor]
     label_encodec: PreproTask[LabelEncodec]
 
-
     def run_preprocessing(self, data: pd.DataFrame):
         for step in self.steps:
             logger.info(f"instantiating step {step.name} with args {step.args}")
@@ -64,7 +63,7 @@ class Preprocessor:
         logger.info(f"processing of manifest complete.")
         return data
 
-    def extracor_encodec_factory(self):
+    def extractor_encodec_factory(self):
         logger.info("creating of feature extractor and label encodec.")
         extractor = self.feature_extractor.create_instance()
         encodec = self.label_encodec.create_instance()
@@ -108,3 +107,7 @@ class Preprocessor:
                 keys = "/".join([str(row[k]) for k in identifier])
                 dset = file.create_dataset(f"{row.split}/{keys}", data=features)
                 dset.attrs["label"] = labels
+
+        data.to_csv(out_path / "manifest.csv")
+        torch.save(feature_extractor, out_path / "feature_extractor.pt")
+        torch.save(label_encodec, out_path / "label_encodec.pt")

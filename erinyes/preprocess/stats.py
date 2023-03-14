@@ -6,8 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from erinyes.inference.metrics import Metric
-from erinyes.preprocess.processor import PreproInstructions
+# from erinyes.inference.metrics import Metric
 from erinyes.util.enums import Split
 
 logger = logging.getLogger(__name__)
@@ -18,11 +17,11 @@ class DataAnalyzer:
         self,
         data_src: Path,
         label_col:str,
-        metrics: dict[str, Metric],
+        # metrics: dict[str, Metric],
     ):
         self.data_src = data_src
         self.label_col = label_col
-        self.metrics = metrics
+        # self.metrics = metrics
 
     def load_data(self):
         self.data = pd.read_csv(self.data_src / "manifest.csv", index_col=None)
@@ -113,30 +112,30 @@ class DataAnalyzer:
 
         return pd.DataFrame(stats)
 
-    def compute_prior_metrics(self, priors: pd.Series):
-        split_wise_results = {}
+    # def compute_prior_metrics(self, priors: pd.Series):
+    #     split_wise_results = {}
 
-        for split in Split:
-            priors = priors[split.name.lower()]
-            max_prior_emotions = [
-                emo for emo in priors.index if priors.loc[emo] == priors.max()
-            ]
-            priors.index.str.removeprefix("prior_")
+    #     for split in Split:
+    #         priors = priors[split.name.lower()]
+    #         max_prior_emotions = [
+    #             emo for emo in priors.index if priors.loc[emo] == priors.max()
+    #         ]
+    #         priors.index.str.removeprefix("prior_")
 
-            results = {}
-            trues = self.data.query(f"split == {split.name.lower()!r}")[
-                self.pp_instructions.label_target
-            ].to_numpy()
+    #         results = {}
+    #         trues = self.data.query(f"split == {split.name.lower()!r}")[
+    #             self.pp_instructions.label_target
+    #         ].to_numpy()
 
-            preds = np.random.choice(
-                max_prior_emotions, len(trues)
-            )  # produce random choice across max prios
+    #         preds = np.random.choice(
+    #             max_prior_emotions, len(trues)
+    #         )  # produce random choice across max prios
 
-            for mname, metric in self.metrics.items():
-                logger.info(f"computing metric: {metric}")
-                metric.track(preds, trues)
-                results.update({mname: metric.calc()})
-                metric.reset()
-            split_wise_results.update({split.name.lower(): results})
+    #         for mname, metric in self.metrics.items():
+    #             logger.info(f"computing metric: {metric}")
+    #             metric.track(preds, trues)
+    #             results.update({mname: metric.calc()})
+    #             metric.reset()
+    #         split_wise_results.update({split.name.lower(): results})
 
-        return split_wise_results
+    #     return split_wise_results

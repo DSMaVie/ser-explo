@@ -1,15 +1,19 @@
-from erinyes.data.features import NormalizedRawAudio, Raw
+from pathlib import Path
+
+import pandas as pd
+from recipe.preprocessing.base import PreprocessingJob
+
+from erinyes.data.features import NormalizedRawAudio
 from erinyes.data.labels import IntEncodec
 from erinyes.preprocess.processor import Preprocessor, PreproTask
 from erinyes.preprocess.steps import (ConditionalSplitter, EmotionFilterNFold,
                                       GatherDurations, LabelNormalizer)
 from erinyes.util.enums import Dataset
-from sisyphus import Job
 
 EMOTIONS = ["Happiness", "Anger", "Sadness", "Fear", "Disgust", "Surprise"]
 
 
-class RavdessW2VPreproJob(Job):
+class RavdessW2VPreproJob(PreprocessingJob):
     def __init__(self) -> None:
         super().__init__()
 
@@ -43,7 +47,11 @@ class RavdessW2VPreproJob(Job):
             feature_extractor=PreproTask(
                 "raw_extractor", NormalizedRawAudio, args={"resample_to": 16_000}
             ),
-            label_encodec=PreproTask("integer_encoding", IntEncodec, args={
-                "classes": EMOTIONS
-            })
+            label_encodec=PreproTask(
+                "integer_encoding", IntEncodec, args={"classes": EMOTIONS}
+            ),
         )
+
+    def preset(self):
+        self.utterance_idx.set("file_idx")
+        self.label_column.set("Emotion")

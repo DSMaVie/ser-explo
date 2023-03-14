@@ -1,18 +1,25 @@
-from matplotlib.transforms import Transform
+from pathlib import Path
 
-from erinyes.data.features import NormalizedRawAudio, Raw
+import pandas as pd
+from matplotlib.transforms import Transform
+from recipe.preprocessing.base import PreprocessingJob
+
+from erinyes.data.features import NormalizedRawAudio
 from erinyes.data.labels import IntEncodec
 from erinyes.preprocess.processor import Preprocessor, PreproTask
-from erinyes.preprocess.steps import (ConditionalSplitter, EmotionFilterNFold,
-                                      GatherDurations, LabelNormalizer,
-                                      TransformStartStopToDurations)
+from erinyes.preprocess.steps import (
+    ConditionalSplitter,
+    EmotionFilterNFold,
+    LabelNormalizer,
+    TransformStartStopToDurations,
+)
 from erinyes.util.enums import Dataset
-from sisyphus import Job
+
 
 EMOTIONS = ["Happiness", "Anger", "Sadness", "Neutral"]
 
 
-class IEM4ProcessorForWav2Vec2(Job):
+class IEM4ProcessorForWav2Vec2(PreprocessingJob):
     def __init__(self) -> None:
         super().__init__()
 
@@ -48,6 +55,6 @@ class IEM4ProcessorForWav2Vec2(Job):
             ),
         )
 
-    def run(self):
-        data = Env.load().RAW_DIR / self.processor.dataset
-        self.processor.run_preprocessing()
+    def preset(self):
+        self.utterance_idx.set("file_idx")
+        self.label_column.set("Emotion")

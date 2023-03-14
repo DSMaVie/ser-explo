@@ -105,7 +105,10 @@ class ConditionalSplitter:
                 raise ValueError(f"key {key} not in {allowed_kwargs}!")
 
             split = Split[key.upper()]
-            self.splits.update({split: val})
+            if isinstance(val, list):
+                self.splits.update({split: val})
+            else:
+                self.splits.update({split: [val]})
 
         if Split.TRAIN not in self.splits:
             raise ValueError("At least the train split must be set!")
@@ -307,7 +310,7 @@ class GatherDurations:
 
 
 class TransformStartStopToDurations:
-    def run(self,data:pd.DataFrame) -> pd.DataFrame:
+    def run(self, data: pd.DataFrame) -> pd.DataFrame:
         data["duration"] = data.end - data.start
-        data = data.drop(["start", "end"])
+        data = data.drop(columns=["start", "end"])
         return data

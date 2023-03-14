@@ -1,8 +1,7 @@
 import logging
 from pathlib import Path
 
-from erinyes.inference.metrics import BalancedEmotionErrorRate, EmotionErrorRate
-from erinyes.preprocess.processor import PreproInstructions
+# from erinyes.inference.metrics import BalancedEmotionErrorRate, EmotionErrorRate
 from erinyes.preprocess.stats import DataAnalyzer
 from sisyphus import Job, Task, tk
 
@@ -10,12 +9,19 @@ logger = logging.getLogger(__name__)
 
 
 class DataAnalysisJob(Job):
-    def __init__(self, pp_result: tk.Path, label_col:str) -> None:
+    def __init__(self, pp_result: tk.Path, label_col: tk.Variable) -> None:
         super().__init__()
-        # instructs = PreproInstructions.from_yaml(Path(pp_inst_path))
-        self.analyzer = DataAnalyzer(
-            Path(pp_result),
-            instructs,
+
+        self.path_to_data = pp_result
+        self.label_col = label_col
+
+        self.stats = self.output_var("stats")
+        # self.raw_metrics = self.output_var("raw_metrics")
+
+    def run(self):
+        analyzer = DataAnalyzer(
+            Path(self.path_to_data),
+            self.label_col.get(),
             # metrics={
             #     "eer": EmotionErrorRate(),
             #     "beer": BalancedEmotionErrorRate(
@@ -23,14 +29,9 @@ class DataAnalysisJob(Job):
             #     ),
             # },
         )
-
-        self.stats = self.output_var("stats")
-        # self.raw_metrics = self.output_var("raw_metrics")
-
-    def run(self):
-        self.analyzer.load_data()
-        stats = self.analyzer.compute_stats()
-        # result = self.analyzer.compute_prior_metrics(priors) #still a bit faulty
+        analyzer.load_data()
+        stats = analyzer.compute_stats()
+        # result = analyzer.compute_prior_metrics(priors) #still a bit faulty
         # logger.info(f"got results {result}")
 
         # self.raw_metrics.set(result)
