@@ -314,3 +314,19 @@ class TransformStartStopToDurations:
         data["duration"] = data.end - data.start
         data = data.drop(columns=["start", "end"])
         return data
+
+
+class MinmaxDrop:
+    def __init__(self, column: str, min: any | None, max: any | None):
+        self.column = column
+        self.min = min
+        self.max = max
+
+    def run(self, data: pd.DataFrame) -> pd.DataFrame:
+        to_drop = data.query(f"{self.column} < {self.min}").query(
+            f"{self.column} > {self.max}"
+        )
+        logger.info(
+            f"found {len(to_drop)} rows outside minmax ({self.min}, {self.max}) for column {self.column} of {len(data)} instances in total."
+        )
+        return data.drop(index=to_drop.index)

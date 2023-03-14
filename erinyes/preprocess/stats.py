@@ -97,6 +97,9 @@ class DataAnalyzer:
         for split in Split:
             data = self.data.query(f"split == {split.name.lower()!r}")
 
+            if not len(data):
+                continue
+
             stats.update(
                 {
                     split.name.lower(): pd.concat(

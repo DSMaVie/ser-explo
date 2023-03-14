@@ -48,8 +48,8 @@ class ResetStateIfNoImprovement:
         self.best_model = None
 
 
-        def after_batch(self, _):
-            return
+    def after_batch(self, _):
+        return
 
     def after_epoch(self, train_state: Trainer):
         train_state.model.eval()

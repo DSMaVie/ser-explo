@@ -1,6 +1,7 @@
 model: w2v
 model_loc:
-frozen: False
+frozen: True
+return_conv_features: True
 classifier:
   model: pooled_seq_clf
   out_dim:

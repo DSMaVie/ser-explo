@@ -33,7 +33,7 @@ class TrainJob(Job):
         self.rqmts = rqmts
         self.profile_first = profile_first
 
-        self.out_pth = self.output_path("training")
+        self.out_path = self.output_path("training")
 
     def run(self):
         instructions = TrainingsInstructions.from_yaml(
@@ -49,12 +49,12 @@ class TrainJob(Job):
         trainer = instructions.trainer_factory(
             model=model,
             train_data=train_data,
-            save_pth=Path(self.out_pth),
+            save_pth=Path(self.out_path),
             gpu_available= True if self.rqmts.get("gpu") else False,
             callbacks=[
                 SaveBestLoss(val_data=val_data),
                 ResetStateIfNoImprovement(val_data=val_data),
-                TensorboardLoggingCallback(val_data=val_data, log_pth=self.out_pth),
+                TensorboardLoggingCallback(val_data=val_data, log_pth=self.out_path),
             ],
         )
 
@@ -74,10 +74,10 @@ class TrainJob(Job):
         trainer = instructions.trainer_factory(
             model=model,
             train_data=train_data,
-            save_pth=Path(self.out_pth),
+            save_pth=Path(self.out_path),
         )
 
-        trainer.profile(val_data, log_path=self.out_pth)
+        trainer.profile(val_data, log_path=self.out_path)
 
     def tasks(self):
         if self.profile_first:

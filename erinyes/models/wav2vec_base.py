@@ -7,25 +7,30 @@ from transformers import AutoProcessor, Wav2Vec2Model
 
 class Wav2Vec(nn.Module):
     def __init__(
-        self, model_loc: str, frozen: bool = False, classifier: nn.Module | None = None
+        self,
+        model_loc: str,
+        frozen: bool = False,
+        classifier: nn.Module | None = None,
+        return_conv_features: bool = False,
     ) -> None:
         super().__init__()
 
-        # self.processor = AutoProcessor.from_pretrained(model_loc)
         self.encoder = Wav2Vec2Model.from_pretrained(model_loc)
         self.classifier = classifier
+        self.return_conv_features = return_conv_features
 
         for param in self.encoder.parameters():
             param.requires_grad = not frozen
 
     def forward(self, x):
-        # x = self.processor(x, sampling_rate=16e3, return_tensors="pt", padding=True)[
-        #     "input_values"
-        # ].squeeze()
-        w2v_out = self.encoder(x).last_hidden_state
-        # w2v_out = torch.stack(w2v_out)
+        w2v_out = self.encoder(x)
+
+        if self.return_conv_features:
+            x = w2v_out.extract_features
+        else:
+            x = w2v_out.last_hidden_state
 
         if not self.classifier:
-            return w2v_out
+            return x
 
-        return self.classifier(w2v_out)
+        return self.classifier(x)

@@ -1,4 +1,4 @@
-architecture: w2v_pooled_clf
+architecture: ft_w2v_pooled_clf
 max_epochs: 200
 batch_size: 2
 loss: ce

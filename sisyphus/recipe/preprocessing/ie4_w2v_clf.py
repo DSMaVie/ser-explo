@@ -11,10 +11,10 @@ from erinyes.preprocess.steps import (
     ConditionalSplitter,
     EmotionFilterNFold,
     LabelNormalizer,
+    MinmaxDrop,
     TransformStartStopToDurations,
 )
 from erinyes.util.enums import Dataset
-
 
 EMOTIONS = ["Happiness", "Anger", "Sadness", "Neutral"]
 
@@ -46,6 +46,11 @@ class IEM4ProcessorForWav2Vec2(PreprocessingJob):
                     },
                 ),
                 PreproTask("get_duration_info", TransformStartStopToDurations),
+                PreproTask(
+                    "minmax_duration",
+                    MinmaxDrop,
+                    args={"column": "duration", "min": 3, "max": 30},
+                ),
             ],
             feature_extractor=PreproTask(
                 "raw_extractor", NormalizedRawAudio, args={"resample_to": 16_000}
