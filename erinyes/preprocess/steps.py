@@ -70,26 +70,23 @@ class EmotionFilterNFold:
     def __init__(
         self, keep: list[str] | None = None, fold: dict[str, str] | None = None
     ) -> None:
-        self.__keep = keep
-        self.__fold = fold
+        self._keep = keep
+        self._fold = fold
 
-        if fold:
-            self.__keep.extend(list(self.__fold.keys()))
+    def _filter_entry(self, s: str) -> str | None:
+        if self._fold:
+            if s in self._fold.keys():
+                s = self._fold[s]
 
-    def __filter_entry(self, s: str) -> str | None:
-        if self.__keep:
-            if s not in self.__keep:
-                return None
-
-        if self.__fold:
-            if s in self.__fold.keys():
-                return self.__fold[s]
+        if self._keep:
+            if s not in self._keep:
+                s = None
 
         return s
 
     def run(self, data: pd.DataFrame) -> pd.DataFrame:
         tqdm.pandas(desc="Filtering and Folding emotions...")
-        data.Emotion = data.Emotion.progress_apply(self.__filter_entry)
+        data.Emotion = data.Emotion.progress_apply(self._filter_entry)
         data = data.dropna()
         return data
 
@@ -128,14 +125,15 @@ class ConditionalSplitter:
 
 
 class ValFromTrainSplitter:
-    def __init__(self, frac: float = .1) -> None:
-        assert 0<=frac<=1, f"Fraction {frac} must be between 0 and 1"
+    def __init__(self, frac: float = 0.1) -> None:
+        assert 0 <= frac <= 1, f"Fraction {frac} must be between 0 and 1"
         self.fraction = frac
 
-    def run(self, data:pd.DataFrame) -> pd.DataFrame:
-        idx_choice =data.query(f"split == 'train'").sample(frac=self.fraction).index
+    def run(self, data: pd.DataFrame) -> pd.DataFrame:
+        idx_choice = data.query(f"split == 'train'").sample(frac=self.fraction).index
         data["split"].loc[idx_choice] = "val"
         return data
+
 
 class AgreementConsolidator:
     def __init__(

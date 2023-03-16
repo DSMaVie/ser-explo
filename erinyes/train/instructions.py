@@ -57,7 +57,6 @@ class TrainingsInstructions:
             split=Split.TRAIN,
             num_workers=rqmts.get("cpu", 0),
             gpu_available=True if rqmts.get("gpu") else False,
-            pack=train_data.get("pack_sequences", True),
         )
 
         val_dataloader = get_data_loader(
@@ -66,7 +65,6 @@ class TrainingsInstructions:
             split=Split.VAL,
             num_workers=rqmts.get("cpu", 0),
             gpu_available=True if rqmts.get("gpu") else False,
-            pack=train_data.get("pack_sequences", True),
         )
 
         model = cls._get_model(

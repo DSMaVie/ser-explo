@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from functools import partial
 from pathlib import Path
 
@@ -10,20 +11,16 @@ from torch.utils.data import DataLoader, SubsetRandomSampler
 from erinyes.data.hdf_dataset import Hdf5Dataset
 from erinyes.util.enums import Split
 
+logger = logging.getLogger(__name__)
 
-def collate_with_pack_pad_to_batch(
-    data: list[tuple[torch.TensorType, torch.TensorType]], pack: bool = True
+
+def pad_collate(
+    data: list[tuple[torch.TensorType, torch.TensorType]]
 ) -> tuple[torch.TensorType, torch.TensorType]:
-    if pack:
-        data = sorted(data, key=lambda x: len(x[0]), reverse=True)
-
     signals, labels = zip(*data)
     seqs = pad_sequence(signals, batch_first=True)
 
-    if pack:
-        orig_lengths = torch.Tensor([signal.shape[0] for signal in signals])
-        seqs = pack_padded_sequence(seqs, lengths=orig_lengths, batch_first=True)
-
+    logger.info(f"collating labels {labels} and seq {seqs}")
     labels = torch.stack(labels).squeeze(dim=1)
     return seqs, labels
 
@@ -34,15 +31,14 @@ def get_data_loader(
     split: Split,
     num_workers: int = 0,
     gpu_available: bool = False,
-    pack: bool = True,
 ):
-    dataset = Hdf5Dataset(data_path / "processed_data.h5", split=split, load_data=True)
+    dataset = Hdf5Dataset(data_path / "processed_data.h5", split=split)
     sampler = SubsetRandomSampler(dataset.available_indices)
     return DataLoader(
         dataset,
         batch_size=batch_size,
         sampler=sampler,
-        collate_fn=partial(collate_with_pack_pad_to_batch, pack=pack),
+        collate_fn=pad_collate,
         num_workers=num_workers,
         pin_memory=gpu_available,
     )

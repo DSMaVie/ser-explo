@@ -4,4 +4,3 @@ batch_size: 2
 loss: ce
 optimizer: Adam
 start_with_tensors: True
-pack_sequences: False

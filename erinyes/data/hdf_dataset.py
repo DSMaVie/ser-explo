@@ -16,6 +16,7 @@ class Hdf5Dataset(Dataset):
         self, src_path: os.PathLike, split: Split, load_data: bool = False
     ) -> None:
         super().__init__()
+        logger.info(f"loading data from {src_path} for split {split}")
 
         self.src_path = src_path
         self.split = split
@@ -24,11 +25,11 @@ class Hdf5Dataset(Dataset):
         with h5py.File(self.src_path, "r") as file:
             return len(file[self.split.name.lower()].keys())
 
-    def __getitem__(self, idx: str, from_disk: bool = False) -> torch.TensorType:
+    def __getitem__(self, idx: str) -> torch.TensorType:
         with h5py.File(self.src_path, "r") as file:
             node = file[f"{self.split.name.lower()}/{idx}"]
-            labels = torch.Tensor(node.attrs["label"])
-            features = torch.Tensor(node[:])
+            labels = torch.Tensor(node["label"][()])
+            features = torch.Tensor(node["features"][()])
 
             return features, labels
 

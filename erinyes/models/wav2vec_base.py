@@ -45,7 +45,9 @@ class Wav2VecCTC(nn.Module):
     ) -> None:
         super().__init__()
 
-        self.encoder = Wav2Vec2ForCTC.from_pretrained(model_loc)
+        full_model = Wav2Vec2ForCTC.from_pretrained(model_loc)
+        self.encoder = full_model if not return_conv_features else full_model.wav2vec2.feature_extractor
+
         self.classifier = classifier
         self.return_conv_features = return_conv_features
 
@@ -56,8 +58,8 @@ class Wav2VecCTC(nn.Module):
         w2v_out = self.encoder(x)
 
         if self.return_conv_features:
-            print(self.encoder)
-            raise NotImplementedError
+            x = w2v_out.transpose(1,2)
+            # feature and seq dim swapped for some reason. hf implementation does this here as well
         else:
             x = w2v_out.logits
 

@@ -102,11 +102,14 @@ class Preprocessor:
                     start=start,
                     duration=duration,
                 )
-                labels = label_encodec.encode(row[label_target])
+                label = label_encodec.encode(row[label_target])
 
-                keys = "/".join([str(row[k]) for k in identifier])
-                dset = file.create_dataset(f"{row.split}/{keys}", data=features)
-                dset.attrs["label"] = labels
+                groupkeys = "/".join([row.split] + [str(row[k]) for k in identifier])
+                grp = file.create_group(groupkeys)
+                grp.create_dataset("features", data=features)
+                grp.create_dataset(
+                    "label", data=(label,) if not isinstance(label, np.ndarray) else label
+                )
 
         data.to_csv(out_path / "manifest.csv")
         torch.save(feature_extractor, out_path / "feature_extractor.pt")
