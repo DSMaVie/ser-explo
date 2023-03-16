@@ -37,7 +37,7 @@ def get_data_loader(
     pack: bool = True,
 ):
     dataset = Hdf5Dataset(data_path / "processed_data.h5", split=split, load_data=True)
-    sampler = SubsetRandomSampler(dataset.get_indices())
+    sampler = SubsetRandomSampler(dataset.available_indices)
     return DataLoader(
         dataset,
         batch_size=batch_size,

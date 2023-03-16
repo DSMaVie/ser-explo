@@ -1,4 +1,4 @@
-model: w2v
+model: w2v_ctc
 model_loc:
 frozen: True
 return_conv_features: True

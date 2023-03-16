@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractproperty
 from typing import Generic, TypeVar
 
 LabelType = TypeVar("LabelType")
@@ -14,6 +14,14 @@ class LabelEncodec(ABC, Generic[LabelType, EncLabelType]):
 
     @abstractmethod
     def decode(self, label: EncLabelType) -> LabelType:
+        ...
+
+    @abstractproperty
+    def class_dim(self) -> int:
+        ...
+
+    @abstractproperty
+    def is_mhe(self) -> bool:
         ...
 
     def batch_encode(self, label_list: list[LabelType]) -> list[EncLabelType]:
@@ -32,6 +40,14 @@ class IntEncodec(LabelEncodec[str, int]):
 
     def decode(self, enc_label: int) -> str:
         return self.classes[enc_label]
+
+    @property
+    def class_dim(self) -> int:
+        return len(self.classes)
+
+    @property
+    def is_mhe(self) -> bool:
+        return False
 
 
 # class LabelEncodec:

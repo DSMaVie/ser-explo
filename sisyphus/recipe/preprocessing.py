@@ -53,7 +53,7 @@ class PreprocessingJob(Job):
 
         logger.info(f"serializing feature_extractor ...")
         fe = self.instructions.feature_extractor
-        with (out_pth / "feature_extractor.pkl").open("wb") as file:
+        with (out_pth / "feature_extractor.pt").open("wb") as file:
             pickle.dump(fe, file)
 
         logger.info(f"serializing label_encodec ...")

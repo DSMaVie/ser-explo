@@ -99,18 +99,17 @@ class ConditionalSplitter:
         self.splits = {}
         self.src_col = src_col
 
+        allowed_kwargs = [s.name.lower() for s in list(Split)]
         for key, val in kwargs.items():
-            allowed_kwargs = [s.name.lower() for s in list(Split)]
             if key not in allowed_kwargs:
                 raise ValueError(f"key {key} not in {allowed_kwargs}!")
 
-            split = Split[key.upper()]
             if isinstance(val, list):
-                self.splits.update({split: val})
+                self.splits.update({key: val})
             else:
-                self.splits.update({split: [val]})
+                self.splits.update({key: [val]})
 
-        if Split.TRAIN not in self.splits:
+        if Split.TRAIN.name.lower() not in self.splits:
             raise ValueError("At least the train split must be set!")
 
     def run(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -121,24 +120,22 @@ class ConditionalSplitter:
         def __wrap(x):
             for split, vals in self.splits.items():
                 if x in vals:
-                    return split.name.lower()
+                    return split
             return None
 
         data["split"] = src_col.progress_apply(__wrap)
-
-        # check for missing split. apply default split fraction
-        for split in Split:
-            if split == Split.TRAIN:
-                continue
-            if split.name.lower() not in data.split:
-                sample = (
-                    data.query("split == 'train'")
-                    .sample(frac=BASE_SPLIT_FRACTION)
-                    .index
-                )
-                data.split.loc[sample] = split.name.lower()
         return data
 
+
+class ValFromTrainSplitter:
+    def __init__(self, frac: float = .1) -> None:
+        assert 0<=frac<=1, f"Fraction {frac} must be between 0 and 1"
+        self.fraction = frac
+
+    def run(self, data:pd.DataFrame) -> pd.DataFrame:
+        idx_choice =data.query(f"split == 'train'").sample(frac=self.fraction).index
+        data["split"].loc[idx_choice] = "val"
+        return data
 
 class AgreementConsolidator:
     def __init__(

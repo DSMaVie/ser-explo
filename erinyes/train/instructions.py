@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-import pickle
+import torch
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
@@ -48,10 +48,8 @@ class TrainingsInstructions:
         with pth_to_arch_params.open("r") as arch_file:
             arch_data = yaml.safe_load(arch_file)
 
-        with (pth_to_pp_output / "feature_extractor.pkl").open("rb") as file:
-            feature_extractor = pickle.load(file)
-        with (pth_to_pp_output / "label_encoder.pkl").open("rb") as file:
-            label_encodec = pickle.load(file)
+        feature_extractor = torch.load(pth_to_pp_output / "feature_extractor.pt")
+        label_encodec = torch.load(pth_to_pp_output / "label_encodec.pt")
 
         train_dataloader = get_data_loader(
             pth_to_pp_output,
@@ -74,14 +72,14 @@ class TrainingsInstructions:
         model = cls._get_model(
             arch_data,
             in_dim=feature_extractor.get_feature_dim(),
-            out_dim=label_encodec.get_class_dim(),
-            is_mhe=label_encodec.get_is_mhe(),
+            out_dim=label_encodec.class_dim,
+            is_mhe=label_encodec.is_mhe,
             model_loc=str(pth_to_pretrained_model),
         )
         logger.info("initialized model")
 
         trainer_factory = cls._get_trainer_factory(
-            model.parameters(), train_args=train_data, is_mhe=label_encodec.get_is_mhe()
+            model.parameters(), train_args=train_data, is_mhe=label_encodec.is_mhe
         )
 
         return cls(

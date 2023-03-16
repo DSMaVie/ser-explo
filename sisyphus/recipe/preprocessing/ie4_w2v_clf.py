@@ -13,6 +13,7 @@ from erinyes.preprocess.steps import (
     LabelNormalizer,
     MinmaxDrop,
     TransformStartStopToDurations,
+    ValFromTrainSplitter,
 )
 from erinyes.util.enums import Dataset
 
@@ -41,10 +42,11 @@ class IEM4ProcessorForWav2Vec2(PreprocessingJob):
                     ConditionalSplitter,
                     args={
                         "src_col": "Session",
-                        "train": range(0, 5),
+                        "train": list(range(0, 5)),
                         "test": 5,
                     },
                 ),
+                PreproTask("produce_val_split", ValFromTrainSplitter),
                 PreproTask("get_duration_info", TransformStartStopToDurations),
                 PreproTask(
                     "minmax_duration",

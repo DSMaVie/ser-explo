@@ -17,3 +17,4 @@ git+https://github.com/rwth-i6/sisyphus.git
 pytest
 black
 seaborn
+pyctcdecode

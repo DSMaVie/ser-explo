@@ -16,9 +16,10 @@ DATA_CONDITIONS = {RavdessW2VPreproJob, IEM4ProcessorForWav2Vec2}
 MODELS = ["lj_1_baseline", "lj_2_baseline"]
 
 
-def run_w2v_baseline():
+def run_lj_baseline():
     model_dl_job = DownloadPretrainedModelJob(
-        "jonatasgrosman/wav2vec2-large-xlsr-53-english"
+        "jonatasgrosman/wav2vec2-large-xlsr-53-english",
+        rqmts={"cpu": 1, "mem": 10, "gpu": 0, "time": 1},
     )  # wav2vec2 xlsr ft on asr english (commonvoice)
 
     for data_pp_job, model_desc in itertools.product(DATA_CONDITIONS, MODELS):
@@ -27,13 +28,13 @@ def run_w2v_baseline():
             f"Loading PPJob for data condition {pp_job.processor.name}. Starting Preprocessing for it."
         )
         tk.register_output(
-            f"{model_desc}/{pp_job.processor.name}/data", pp_job.out_path
+            f"pp/{pp_job.processor.name}/data", pp_job.out_path
         )
 
         logger.info(f"loading analysis_job for {pp_job.processor.name}")
         pp_ana_job = DataAnalysisJob(pp_job.out_path, pp_job.label_column)
         tk.register_report(
-            f"{model_desc}/{pp_job.processor.name}/data_stats.txt",
+            f"pp/{pp_job.processor.name}/data_stats.txt",
             pp_ana_job.stats,
         )
 

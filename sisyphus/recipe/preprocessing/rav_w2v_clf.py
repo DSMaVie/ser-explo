@@ -6,8 +6,12 @@ from recipe.preprocessing.base import PreprocessingJob
 from erinyes.data.features import NormalizedRawAudio
 from erinyes.data.labels import IntEncodec
 from erinyes.preprocess.processor import Preprocessor, PreproTask
-from erinyes.preprocess.steps import (ConditionalSplitter, EmotionFilterNFold,
-                                      GatherDurations, LabelNormalizer)
+from erinyes.preprocess.steps import (
+    ConditionalSplitter,
+    EmotionFilterNFold,
+    GatherDurations,
+    LabelNormalizer,
+)
 from erinyes.util.enums import Dataset
 
 EMOTIONS = ["Happiness", "Anger", "Sadness", "Fear", "Disgust", "Surprise"]
@@ -33,9 +37,9 @@ class RavdessW2VPreproJob(PreprocessingJob):
                     ConditionalSplitter,
                     args={
                         "src_col": "Actor",
-                        "train": range(0, 19),
+                        "train": list(range(0, 19)),
                         "val": 19,
-                        "test": range(19, 25),
+                        "test": list(range(19, 25)),
                     },
                 ),
                 PreproTask(
