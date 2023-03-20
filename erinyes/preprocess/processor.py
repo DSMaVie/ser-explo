@@ -33,7 +33,7 @@ RecipeType = TypeVar("RecipeType", PreproFunc, LabelEncodec, FeatureExtractor)
 
 
 @dataclass
-class PreproTask(Generic[RecipeType]):
+class PreproRecipe(Generic[RecipeType]):
     name: str
     instance: RecipeType
     args: dict | None = None
@@ -48,9 +48,9 @@ class PreproTask(Generic[RecipeType]):
 class Preprocessor:
     src: Dataset
     name: str
-    steps: list[PreproTask[PreproFunc]]
-    feature_extractor: PreproTask[FeatureExtractor]
-    label_encodec: PreproTask[LabelEncodec]
+    steps: list[PreproRecipe[PreproFunc]]
+    feature_extractor: PreproRecipe[FeatureExtractor]
+    label_encodec: PreproRecipe[LabelEncodec]
 
     def run_preprocessing(self, data: pd.DataFrame):
         for step in self.steps:
@@ -108,7 +108,8 @@ class Preprocessor:
                 grp = file.create_group(groupkeys)
                 grp.create_dataset("features", data=features)
                 grp.create_dataset(
-                    "label", data=(label,) if not isinstance(label, np.ndarray) else label
+                    "label",
+                    data=(label,) if not isinstance(label, np.ndarray) else label,
                 )
 
         data.to_csv(out_path / "manifest.csv")

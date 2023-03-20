@@ -4,7 +4,6 @@ import os
 import h5py
 import torch
 from torch.utils.data import Dataset
-from tqdm import tqdm
 
 from erinyes.util.enums import Split
 
@@ -28,6 +27,8 @@ class Hdf5Dataset(Dataset):
     def __getitem__(self, idx: str) -> torch.TensorType:
         with h5py.File(self.src_path, "r") as file:
             node = file[f"{self.split.name.lower()}/{idx}"]
+
+            logger.debug(f"retrieving node {self.split.name.lower()}/{idx}")
             labels = torch.Tensor(node["label"][()])
             features = torch.Tensor(node["features"][()])
 
@@ -40,10 +41,10 @@ class Hdf5Dataset(Dataset):
             logger.info(
                 f"opening file at {self.src_path}. available first lvl keys {list(file.keys())}"
             )
-            train_block = file[self.split.name.lower()]
-            train_block.visit(
+            curr_block = file[self.split.name.lower()]
+            curr_block.visit(
                 lambda key: keys.append(key)
-                if isinstance(train_block[key], h5py.Dataset)
+                if isinstance(curr_block[key], h5py.Group)
                 else None
             )
         return keys

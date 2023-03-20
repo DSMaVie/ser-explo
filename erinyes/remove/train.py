@@ -8,7 +8,7 @@ from erinyes.train.callbacks import (
     SaveBestLoss,
     TensorboardLoggingCallback,
 )
-from erinyes.train.instructions import TrainingsInstructions
+from erinyes.remove.model_loading import TrainingsInstructions
 from sisyphus import Job, Task, tk
 
 logger = logging.getLogger(__name__)

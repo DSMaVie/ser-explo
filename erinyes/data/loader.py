@@ -20,7 +20,7 @@ def pad_collate(
     signals, labels = zip(*data)
     seqs = pad_sequence(signals, batch_first=True)
 
-    logger.info(f"collating labels {labels} and seq {seqs}")
+    logger.debug(f"collating labels {labels} and seq {seqs}")
     labels = torch.stack(labels).squeeze(dim=1)
     return seqs, labels
 

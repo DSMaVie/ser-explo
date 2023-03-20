@@ -2,7 +2,7 @@ import logging
 from itertools import product
 from pathlib import Path
 
-from erinyes.data.util import get_data_loader
+from erinyes.data.loader import get_data_loader
 from erinyes.train.trainer import Trainer
 from erinyes.util.enums import Split
 

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from erinyes.data.util import get_data_loader
+from erinyes.data.loader import get_data_loader
 from erinyes.inference.model_selector import ModelSelector
 from erinyes.inference.testbench import Testbench
 from erinyes.util.enums import Split

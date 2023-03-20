@@ -21,10 +21,3 @@ class MultiClassDecLoss:
         return self.loss_fn(pred, true.long())
 
 
-class Optimizer(Enum):
-    Adam = Adam
-
-
-class LossFn(Enum):
-    binary_ce = MultipleBinaryDecLoss
-    mc_ce = MultiClassDecLoss

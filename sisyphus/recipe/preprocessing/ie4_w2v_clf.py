@@ -1,12 +1,8 @@
-from pathlib import Path
-
-import pandas as pd
-from matplotlib.transforms import Transform
 from recipe.preprocessing.base import PreprocessingJob
 
 from erinyes.data.features import NormalizedRawAudio
 from erinyes.data.labels import IntEncodec
-from erinyes.preprocess.processor import Preprocessor, PreproTask
+from erinyes.preprocess.processor import Preprocessor, PreproRecipe
 from erinyes.preprocess.steps import (
     ConditionalSplitter,
     EmotionFilterNFold,
@@ -28,16 +24,16 @@ class IEM4ProcessorForWav2Vec2(PreprocessingJob):
             src=Dataset.IEM,
             name="iem4_w2v_clf",
             steps=[
-                PreproTask(
+                PreproRecipe(
                     "normalize_labels",
                     LabelNormalizer,
                 ),
-                PreproTask(
+                PreproRecipe(
                     "filter_emotions",
                     EmotionFilterNFold,
                     args={"keep": EMOTIONS, "fold": {"Excitement": "Happiness"}},
                 ),
-                PreproTask(
+                PreproRecipe(
                     "split_on_speaker",
                     ConditionalSplitter,
                     args={
@@ -46,18 +42,18 @@ class IEM4ProcessorForWav2Vec2(PreprocessingJob):
                         "test": 5,
                     },
                 ),
-                PreproTask("produce_val_split", ValFromTrainSplitter),
-                PreproTask("get_duration_info", TransformStartStopToDurations),
-                PreproTask(
+                PreproRecipe("produce_val_split", ValFromTrainSplitter),
+                PreproRecipe("get_duration_info", TransformStartStopToDurations),
+                PreproRecipe(
                     "minmax_duration",
                     MinmaxDrop,
                     args={"column": "duration", "min": 3, "max": 30},
                 ),
             ],
-            feature_extractor=PreproTask(
+            feature_extractor=PreproRecipe(
                 "raw_extractor", NormalizedRawAudio, args={"resample_to": 16_000}
             ),
-            label_encodec=PreproTask(
+            label_encodec=PreproRecipe(
                 "integer_encoding", IntEncodec, args={"classes": EMOTIONS}
             ),
         )

@@ -5,7 +5,7 @@ from recipe.preprocessing.base import PreprocessingJob
 
 from erinyes.data.features import NormalizedRawAudio
 from erinyes.data.labels import IntEncodec
-from erinyes.preprocess.processor import Preprocessor, PreproTask
+from erinyes.preprocess.processor import Preprocessor, PreproRecipe
 from erinyes.preprocess.steps import (
     ConditionalSplitter,
     EmotionFilterNFold,
@@ -25,14 +25,14 @@ class RavdessW2VPreproJob(PreprocessingJob):
             src=Dataset.RAV,
             name="ravdess_w2v_clf",
             steps=[
-                PreproTask(
+                PreproRecipe(
                     "normalize_labels",
                     LabelNormalizer,
                 ),
-                PreproTask(
+                PreproRecipe(
                     "filter_emotions", EmotionFilterNFold, args={"keep": EMOTIONS}
                 ),
-                PreproTask(
+                PreproRecipe(
                     "split_on_speaker",
                     ConditionalSplitter,
                     args={
@@ -42,16 +42,16 @@ class RavdessW2VPreproJob(PreprocessingJob):
                         "test": list(range(19, 25)),
                     },
                 ),
-                PreproTask(
+                PreproRecipe(
                     "gather_durations",
                     GatherDurations,
                     args={"pth": "rav", "filetype": "wav"},
                 ),
             ],
-            feature_extractor=PreproTask(
+            feature_extractor=PreproRecipe(
                 "raw_extractor", NormalizedRawAudio, args={"resample_to": 16_000}
             ),
-            label_encodec=PreproTask(
+            label_encodec=PreproRecipe(
                 "integer_encoding", IntEncodec, args={"classes": EMOTIONS}
             ),
         )
