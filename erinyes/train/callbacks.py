@@ -92,7 +92,7 @@ class TensorboardLoggingCallback:  # TODO add metrics
         gpu_available=False,
     ) -> None:
         self.writer = SummaryWriter(log_dir=log_path)
-        self.val_data = get_data_loader(
+        self.data = get_data_loader(
             data_path,
             batch_size=batch_size,
             split=Split.VAL,
@@ -112,6 +112,7 @@ class TensorboardLoggingCallback:  # TODO add metrics
 
     def after_epoch(self, train_state: Trainer) -> None:
         train_state.model.eval()
+        loss = -np.inf
         for batch_idx, (x, y) in tqdm(
             enumerate(self.data),
             desc="Validation: Current Batch in Epoch",
@@ -121,7 +122,7 @@ class TensorboardLoggingCallback:  # TODO add metrics
 
             # calc model output and loss
             pred = train_state.model(x)
-            loss += train_state.loss_fn(pred, y.long())
+            loss += train_state.loss_fn(pred, y)
 
         avg_loss = loss / batch_idx
         self.writer.add_scalar(

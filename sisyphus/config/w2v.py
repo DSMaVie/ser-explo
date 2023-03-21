@@ -6,10 +6,8 @@ from recipe.data_analysis import DataAnalysisJob
 from recipe.download_pt_model import DownloadPretrainedModelJob
 from recipe.preprocessing.ie4_w2v_clf import IEM4ProcessorForWav2Vec2
 from recipe.preprocessing.rav_w2v_clf import RavdessW2VPreproJob
-from recipe.train import TrainJob
 from recipe.train.w2v_training import W2V2TrainingJob
 
-from erinyes.util.env import Env
 from sisyphus import tk
 
 logger = logging.getLogger(__name__)
@@ -27,7 +25,9 @@ def run_lj_baseline():
         rqmts={"cpu": 1, "mem": 10, "gpu": 0, "time": 1},
     )  # wav2vec2 xlsr ft on asr english (commonvoice)
 
-    for data_pp_job, (train_desc, train_job) in itertools.product(DATA_CONDITIONS, TRAIN_CONDITIONS.items()):
+    for data_pp_job, (train_desc, train_job) in itertools.product(
+        DATA_CONDITIONS, TRAIN_CONDITIONS.items()
+    ):
         pp_job = data_pp_job()
         logger.info(
             f"Loading PPJob for data condition {pp_job.processor.name}. Starting Preprocessing for it."
@@ -46,8 +46,5 @@ def run_lj_baseline():
             pretrained_model_path=model_dl_job.out,
             rqmts={"cpu": 2, "mem": 16, "gpu": 1, "time": 10},
             profile_first=False,
-
         )
-        tk.register_output(
-            f"/{pp_job.processor.name}/{train_desc}", train_job.out_path
-        )
+        tk.register_output(f"/{pp_job.processor.name}/{train_desc}", train_job.out_path)

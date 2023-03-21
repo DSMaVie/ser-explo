@@ -42,10 +42,10 @@ class ObjectRecipe(Generic[RecipeType]):
     instance: RecipeType
     args: dict | None = None
 
-    def create_instance(self):
+    def create_instance(self, *args, **kwargs):
         if self.args is not None:
-            return self.instance(**self.args)
-        return self.instance()
+            return self.instance(*args, **kwargs, **self.args)
+        return self.instance(*args, **kwargs)
 
 
 @dataclass
@@ -83,12 +83,8 @@ class Trainer:
         self.loss = self.loss_recipe.create_instance()
         self.callbacks = [cbr.create_instance() for cbr in self.callback_recipes]
 
-        #preload optimizer
-        if self.optimizer_recipe.args:
-            self.optimizer_recipe.args["params"] = model.parameters()
-        else:
-            self.optimizer_recipe.args = {"params": model.parameters()}
-        self.opti = self.optimizer_recipe.create_instance()
+        # preload optimizer
+        self.opti = self.optimizer_recipe.create_instance(model.parameters())
 
         self.is_preped = True
         logger.info("preparation done.")
@@ -157,7 +153,6 @@ class Trainer:
         if "cuda" in self._train_device:
             logger.info("send model to gpu")
 
-
         self.model.eval()
         with profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
@@ -191,17 +186,17 @@ class Trainer:
     def from_state(cls, pth: Path):
         state_dict = torch.load(pth / "train_state.pt")
         inst = cls(
-            max_epochs= state_dict["max_epochs"],
-            loss_fn= state_dict["loss_recipe"],
-            optimizer= state_dict["optimizer_recipe"],
-            save_pth= pth.parent,
-            gpu_available= state_dict["gpu_available"],
-            callbacks= state_dict["callback_recipe"],
+            max_epochs=state_dict["max_epochs"],
+            loss_fn=state_dict["loss_recipe"],
+            optimizer=state_dict["optimizer_recipe"],
+            save_pth=pth.parent,
+            gpu_available=state_dict["gpu_available"],
+            callbacks=state_dict["callback_recipe"],
         )
         inst.completed_epochs = state_dict["completed_epochs"]
 
         model_state = torch.load(pth / "model.pt")
         train_data = torch.load(pth / "train_data.pt")
 
-        inst.prepare(model=model_state,data=train_data)
+        inst.prepare(model=model_state, data=train_data)
         return inst

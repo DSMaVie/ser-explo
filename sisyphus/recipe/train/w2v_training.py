@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from platform import architecture
 
 import torch
 
@@ -9,12 +8,13 @@ from erinyes.data.loader import get_data_loader
 from erinyes.models.classifier import PooledSeqClassifier
 from erinyes.models.wav2vec_base import Wav2VecCTC
 from erinyes.train.callbacks import TensorboardLoggingCallback
+from erinyes.train.other import MultiClassDecLoss
 from erinyes.train.trainer import ObjectRecipe, Trainer
 from erinyes.util.enums import Split
-from sisyphus import tk
+from sisyphus import Job, Task, tk
 
 
-class W2V2TrainingJob(tk.Job):
+class W2V2TrainingJob(Job):
     def __init__(
         self,
         data_path: tk.Path,
@@ -37,7 +37,7 @@ class W2V2TrainingJob(tk.Job):
         self.trainer = Trainer(
             max_epochs=200,
             loss_recipe=ObjectRecipe(
-                name="cross_entropy", instance=torch.nn.CrossEntropyLoss
+                name="cross_entropy", instance=MultiClassDecLoss
             ),
             optimizer_recipe=ObjectRecipe(
                 name="adam_optimizer", instance=torch.optim.Adam
@@ -51,8 +51,9 @@ class W2V2TrainingJob(tk.Job):
                     args={
                         "data_path": Path(self.data_path.get_path()),
                         "log_path": Path(self.out_path.get_path()),
-                        "num_workers": self.rqtms.get("cpus",0),
-                        "gpu_avalable": self.rqmts.get("gpu") is not None
+                        "num_workers": self.rqmts.get("cpus", 0),
+                        "batch_size": 2,
+                        "gpu_available": self.rqmts.get("gpu") is not None,
                     },
                 )
             ],
@@ -78,7 +79,7 @@ class W2V2TrainingJob(tk.Job):
             model = self.get_model()
             train_data = get_data_loader(
                 Path(self.data_path.get_path()),
-                batch_size=4,
+                batch_size=2,
                 split=Split.TRAIN,
                 num_workers=self.rqmts["cpu"],
                 gpu_available=self.rqmts.get("gpu") is not None,
@@ -102,5 +103,5 @@ class W2V2TrainingJob(tk.Job):
 
     def tasks(self):
         if self.profile_first:
-            yield tk.Task("run_profile", rqmt=self.rqmts)
-        yield tk.Task("run", rqmt=self.rqmts)
+            yield Task("run_profile", rqmt=self.rqmts)
+        yield Task("run", rqmt=self.rqmts)

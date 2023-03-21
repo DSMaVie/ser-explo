@@ -1,8 +1,5 @@
-from enum import Enum
-
 import torch
 from torch.nn import BCELoss, CrossEntropyLoss
-from torch.optim import Adam
 
 
 class MultipleBinaryDecLoss:
@@ -19,5 +16,3 @@ class MultiClassDecLoss:
 
     def __call__(self, pred: torch.TensorType, true: torch.TensorType):
         return self.loss_fn(pred, true.long())
-
-
