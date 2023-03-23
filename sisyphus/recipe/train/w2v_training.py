@@ -7,7 +7,7 @@ import torch
 from erinyes.data.loader import get_data_loader
 from erinyes.models.classifier import PooledSeqClassifier
 from erinyes.models.wav2vec_base import Wav2VecCTC
-from erinyes.train.callbacks import TensorboardLoggingCallback
+from erinyes.train.callbacks import TensorboardLoggingCallback, TrackVRAMUsage
 from erinyes.train.other import MultiClassDecLoss
 from erinyes.train.trainer import ObjectRecipe, Trainer
 from erinyes.util.enums import Split
@@ -52,9 +52,13 @@ class W2V2TrainingJob(Job):
                         "data_path": Path(self.data_path.get_path()),
                         "log_path": Path(self.out_path.get_path()),
                         "num_workers": self.rqmts.get("cpus", 0),
-                        "batch_size": 2,
+                        "batch_size": 1,
                         "gpu_available": self.rqmts.get("gpu") is not None,
                     },
+                ),
+                ObjectRecipe(
+                    name="track_vram",
+                    instance=TrackVRAMUsage,
                 )
             ],
         )
@@ -79,7 +83,7 @@ class W2V2TrainingJob(Job):
             model = self.get_model()
             train_data = get_data_loader(
                 Path(self.data_path.get_path()),
-                batch_size=2,
+                batch_size=1,
                 split=Split.TRAIN,
                 num_workers=self.rqmts["cpu"],
                 gpu_available=self.rqmts.get("gpu") is not None,

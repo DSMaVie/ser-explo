@@ -187,16 +187,16 @@ class Trainer:
         state_dict = torch.load(pth / "train_state.pt")
         inst = cls(
             max_epochs=state_dict["max_epochs"],
-            loss_fn=state_dict["loss_recipe"],
-            optimizer=state_dict["optimizer_recipe"],
+            loss_recipe=state_dict["loss_recipe"],
+            optimizer_recipe=state_dict["optimizer_recipe"],
             save_pth=pth.parent,
             gpu_available=state_dict["gpu_available"],
-            callbacks=state_dict["callback_recipe"],
+            callback_recipes=state_dict["callback_recipes"],
         )
         inst.completed_epochs = state_dict["completed_epochs"]
 
         model_state = torch.load(pth / "model.pt")
-        train_data = torch.load(pth / "train_data.pt")
+        train_data = torch.load(pth / "data.pt")
 
-        inst.prepare(model=model_state, data=train_data)
+        inst.prepare(model_state, train_data)
         return inst

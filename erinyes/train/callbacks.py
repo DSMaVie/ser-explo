@@ -10,7 +10,7 @@ from tqdm import tqdm
 from erinyes.data.loader import get_data_loader
 from erinyes.train.trainer import Trainer
 from erinyes.util.enums import Split
-from erinyes.util.env import print_gpu_utilization
+from erinyes.util.env import return_gpu_utilization
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +122,7 @@ class TensorboardLoggingCallback:  # TODO add metrics
 
             # calc model output and loss
             pred = train_state.model(x)
-            loss += train_state.loss_fn(pred, y)
+            loss += train_state.loss(pred, y)
 
         avg_loss = loss / batch_idx
         self.writer.add_scalar(
@@ -138,7 +138,8 @@ class TensorboardLoggingCallback:  # TODO add metrics
 
 class TrackVRAMUsage:
     def after_batch(self, _):
-        print_gpu_utilization()
+        return
 
     def after_step(self, _):
-        return
+        gpu_ut = return_gpu_utilization()
+        logger.info(f"{gpu_ut:.2f}MB currently used on VRAM.")

@@ -21,7 +21,7 @@ TRAIN_CONDITIONS = {
 
 def run_lj_baseline():
     model_dl_job = DownloadPretrainedModelJob(
-        "jonatasgrosman/wav2vec2-large-xlsr-53-english",
+        "facebook/wav2vec2-base-960h",
         rqmts={"cpu": 1, "mem": 10, "gpu": 0, "time": 1},
     )  # wav2vec2 xlsr ft on asr english (commonvoice)
 
