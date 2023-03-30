@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import logging
-from functools import partial
+
 from pathlib import Path
 
 import torch
-from torch.nn.utils.rnn import pack_padded_sequence, pad_sequence
+from torch.nn.utils.rnn import  pad_sequence
 from torch.utils.data import DataLoader, SubsetRandomSampler
 
 from erinyes.data.hdf_dataset import Hdf5Dataset
@@ -15,13 +15,15 @@ logger = logging.getLogger(__name__)
 
 
 def pad_collate(
-    data: list[tuple[torch.TensorType, torch.TensorType]]
+    data: list[tuple[torch.TensorType, torch.TensorType]], return_dicts: bool = False
 ) -> tuple[torch.TensorType, torch.TensorType]:
     signals, labels = zip(*data)
     seqs = pad_sequence(signals, batch_first=True)
 
     logger.debug(f"collating labels {labels} and seq {seqs}")
     labels = torch.stack(labels).squeeze(dim=1)
+    if return_dicts:
+        return {"input_values": seqs, "labels": labels}
     return seqs, labels
 
 

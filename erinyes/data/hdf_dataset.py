@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import logging
 import os
+from functools import cached_property
 
 import h5py
 import torch
@@ -12,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class Hdf5Dataset(Dataset):
     def __init__(
-        self, src_path: os.PathLike, split: Split, load_data: bool = False
+        self, src_path: os.PathLike, split: Split, return_dict: bool = False
     ) -> None:
         super().__init__()
         logger.info(f"loading data from {src_path} for split {split}")
@@ -20,11 +23,16 @@ class Hdf5Dataset(Dataset):
         self.src_path = src_path
         self.split = split
 
+        self.return_dict = return_dict
+
     def __len__(self):
         with h5py.File(self.src_path, "r") as file:
             return len(file[self.split.name.lower()].keys())
 
-    def __getitem__(self, idx: str) -> torch.TensorType:
+    def __getitem__(self, idx: str | int) -> torch.TensorType:
+        if isinstance(idx, int):
+            idx = self.available_indices[idx]
+
         with h5py.File(self.src_path, "r") as file:
             node = file[f"{self.split.name.lower()}/{idx}"]
 
@@ -32,9 +40,11 @@ class Hdf5Dataset(Dataset):
             labels = torch.Tensor(node["label"][()])
             features = torch.Tensor(node["features"][()])
 
+            if self.return_dict:
+                return {"input_values": features, "label_ids": labels}
             return features, labels
 
-    @property
+    @cached_property
     def available_indices(self):
         keys = []
         with h5py.File(self.src_path, "r") as file:

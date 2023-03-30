@@ -1,20 +1,26 @@
 from __future__ import annotations
 
+import logging
+import os
 from pathlib import Path
 
 import torch
-
-from erinyes.data.loader import get_data_loader
-from erinyes.models.classifier import PooledSeqClassifier
-from erinyes.models.wav2vec_base import Wav2VecCTC
-from erinyes.train.callbacks import TensorboardLoggingCallback, TrackVRAMUsage
-from erinyes.train.other import MultiClassDecLoss
-from erinyes.train.trainer import ObjectRecipe, Trainer
+from transformers import (
+    Trainer,
+    TrainingArguments,
+)
+from transformers.trainer_utils import get_last_checkpoint
+from functools import partial
+from erinyes.data.hdf_dataset import Hdf5Dataset
+from erinyes.data.loader import pad_collate
+from erinyes.models.wav2vec_base import HFWav2VecCTCwithClf
 from erinyes.util.enums import Split
 from sisyphus import Job, Task, tk
 
+logger = logging.getLogger(__name__)
 
-class W2V2TrainingJob(Job):
+
+class HFTrainingJob(Job):
     def __init__(
         self,
         data_path: tk.Path,
@@ -34,78 +40,106 @@ class W2V2TrainingJob(Job):
 
         self.out_path = self.output_path("training")
 
-        self.trainer = Trainer(
-            max_epochs=200,
-            loss_recipe=ObjectRecipe(
-                name="cross_entropy", instance=MultiClassDecLoss
-            ),
-            optimizer_recipe=ObjectRecipe(
-                name="adam_optimizer", instance=torch.optim.Adam
-            ),
-            save_pth=Path(self.out_path.get_path()),
-            gpu_available=self.rqmts.get("gpu") is not None,
-            callback_recipes=[
-                ObjectRecipe(
-                    name="tensorbaord",
-                    instance=TensorboardLoggingCallback,
-                    args={
-                        "data_path": Path(self.data_path.get_path()),
-                        "log_path": Path(self.out_path.get_path()),
-                        "num_workers": self.rqmts.get("cpus", 0),
-                        "batch_size": 1,
-                        "gpu_available": self.rqmts.get("gpu") is not None,
-                    },
-                ),
-                ObjectRecipe(
-                    name="track_vram",
-                    instance=TrackVRAMUsage,
-                )
-            ],
+        self.train_args = TrainingArguments(
+            output_dir=self.out_path.get_path(),
+            do_train=True,
+            num_train_epochs=100,
+            # gradient_checkpointing=True,
+            save_strategy="epoch",
+            dataloader_num_workers=self.rqmts.get("cpus", 0),
+            report_to="tensorboard",
+            overwrite_output_dir=True,
         )
 
     def get_model(self):
         label_encodec = torch.load(Path(self.data_path.get()) / "label_encodec.pt")
 
-        return Wav2VecCTC(
+        return HFWav2VecCTCwithClf(
             model_loc=self.pretrained_model_path.get_path(),
-            frozen=self.use_features,
-            return_conv_features=self.use_features,
-            classifier=PooledSeqClassifier(
-                out_dim=label_encodec.class_dim, hidden_dim=1024, is_mhe=False
-            ),
+            freeze_encoder=self.use_features,
+            use_conv_features=self.use_features,
+            clf_hidden_dim=1024,
+            clf_out_dim=label_encodec.class_dim,
         )
 
     def run(self):
-        possible_state_loc = Path(self.out_path.get_path()) / "last"
-        if possible_state_loc.exists():
-            self.trainer = Trainer.from_state(possible_state_loc)
-        else:
-            model = self.get_model()
-            train_data = get_data_loader(
-                Path(self.data_path.get_path()),
-                batch_size=1,
-                split=Split.TRAIN,
-                num_workers=self.rqmts["cpu"],
-                gpu_available=self.rqmts.get("gpu") is not None,
-            )
-            self.trainer.prepare(model, train_data)
-
-        self.trainer.fit()
-
-    def run_profile(self):
         model = self.get_model()
-        val_data = get_data_loader(
-            Path(self.data_path.get_path()),
-            batch_size=4,
-            split=Split.VAL,
-            num_workers=self.rqmts["cpu"],
-            gpu_available=self.rqmts.get("gpu") is not None,
+        train_data = Hdf5Dataset(
+            src_path=self.data_path.get_path() + "/processed_data.h5",
+            split=Split.TRAIN,
         )
-        self.trainer.prepare(model, val_data)
 
-        self.trainer.profile(log_path=self.out_path.get())
+        trainer = Trainer(
+            model=model,
+            args=self.train_args,
+            train_dataset=train_data,
+            data_collator=partial(pad_collate, return_dicts=True),
+            # data_collator=DataCollatorWithPadding(
+            #     tokenizer=Wav2Vec2CTCTokenizer.from_pretrained(
+            #         self.pretrained_model_path.get_path()
+            #     )
+            # )
+            # compute_metrics=compute_metrics,
+        )
+
+        last_checkpoint = None
+        if (
+            os.path.isdir(self.train_args.output_dir)
+            and self.train_args.do_train
+            and not self.train_args.overwrite_output_dir
+        ):
+            last_checkpoint = get_last_checkpoint(self.train_args.output_dir)
+            if (
+                last_checkpoint is None
+                and len(os.listdir(self.train_args.output_dir)) > 0
+            ):
+                raise ValueError(
+                    f"Output directory ({self.train_args.output_dir}) already exists and is not empty. "
+                    "Use --overwrite_output_dir to overcome."
+                )
+            elif (
+                last_checkpoint is not None
+                and self.train_args.resume_from_checkpoint is None
+            ):
+                logger.info(
+                    f"Checkpoint detected, resuming training at {last_checkpoint}. To avoid this behavior, change "
+                    "the `--output_dir` or add `--overwrite_output_dir` to train from scratch."
+                )
+        logger.info(f"last checkpoint is {last_checkpoint}")
+
+        # Training
+        if self.train_args.do_train:
+            checkpoint = None
+            if self.train_args.resume_from_checkpoint is not None:
+                checkpoint = self.train_args.resume_from_checkpoint
+            elif last_checkpoint is not None:
+                checkpoint = last_checkpoint
+
+            logger.info(f"found cp {checkpoint}")
+            train_result = trainer.train(resume_from_checkpoint=checkpoint)
+            # metrics = train_result.metrics
+
+            # metrics["train_samples"] = len(train_data)
+
+            trainer.save_model()  # Saves the tokenizer too for easy upload
+
+            # trainer.log_metrics("train", metrics)
+            # trainer.save_metrics("train", metrics)
+            trainer.save_state()
+
+    def resume(self):
+        self.train_args.resume_from_checkpoint = True
+        self.run()
 
     def tasks(self):
         if self.profile_first:
             yield Task("run_profile", rqmt=self.rqmts)
-        yield Task("run", rqmt=self.rqmts)
+        yield Task("run", resume="resume", rqmt=self.rqmts)
+
+
+# init -> train args
+# _prep = init trainer get data and model
+#       -> extra function?
+# rewrite run
+# model must use model output
+# for that loss must be encoded in model!!

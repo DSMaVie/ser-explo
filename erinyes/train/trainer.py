@@ -9,6 +9,7 @@ from typing import Callable, Generic, TypeVar
 
 import numpy as np
 import torch
+import transformers
 from torch import nn
 from torch.profiler import ProfilerActivity, profile, record_function
 from torch.utils.data import DataLoader
@@ -200,3 +201,4 @@ class Trainer:
 
         inst.prepare(model_state, train_data)
         return inst
+

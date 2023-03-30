@@ -6,7 +6,7 @@ from recipe.data_analysis import DataAnalysisJob
 from recipe.download_pt_model import DownloadPretrainedModelJob
 from recipe.preprocessing.ie4_w2v_clf import IEM4ProcessorForWav2Vec2
 from recipe.preprocessing.rav_w2v_clf import RavdessW2VPreproJob
-from recipe.train.w2v_training import W2V2TrainingJob
+from recipe.train.w2v_training import HFTrainingJob
 
 from sisyphus import tk
 
@@ -14,14 +14,14 @@ logger = logging.getLogger(__name__)
 
 DATA_CONDITIONS = [RavdessW2VPreproJob, IEM4ProcessorForWav2Vec2]
 TRAIN_CONDITIONS = {
-    "lj_finetune": partial(W2V2TrainingJob, use_features=False),
-    "lj_feature_extraction": partial(W2V2TrainingJob, use_features=True),
+    "lj_finetune": partial(HFTrainingJob, use_features=False),
+    "lj_feature_extraction": partial(HFTrainingJob, use_features=True),
 }
 
 
 def run_lj_baseline():
     model_dl_job = DownloadPretrainedModelJob(
-        "facebook/wav2vec2-base-960h",
+        "jonatasgrosman/wav2vec2-large-xlsr-53-english",
         rqmts={"cpu": 1, "mem": 10, "gpu": 0, "time": 1},
     )  # wav2vec2 xlsr ft on asr english (commonvoice)
 
