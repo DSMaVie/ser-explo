@@ -2,17 +2,19 @@ from __future__ import annotations
 
 import logging
 import os
+from functools import partial
 from pathlib import Path
 
 import torch
-from transformers import (
-    Trainer,
-    TrainingArguments,
-)
+from sklearn import metrics
+from transformers import Trainer, TrainingArguments
 from transformers.trainer_utils import get_last_checkpoint
-from functools import partial
+
 from erinyes.data.hdf_dataset import Hdf5Dataset
 from erinyes.data.loader import pad_collate
+from erinyes.inference.metrics import (BalancedEmotionErrorRate,
+                                       EmotionErrorRate)
+from erinyes.inference.metrics_tracker import InTrainingsMetricsTracker
 from erinyes.models.wav2vec_base import HFWav2VecCTCwithClf
 from erinyes.util.enums import Split
 from sisyphus import Job, Task, tk
@@ -43,7 +45,7 @@ class HFTrainingJob(Job):
         self.train_args = TrainingArguments(
             output_dir=self.out_path.get_path(),
             do_train=True,
-            num_train_epochs=100,
+            num_train_epochs=5,
             # gradient_checkpointing=True,
             save_strategy="epoch",
             dataloader_num_workers=self.rqmts.get("cpus", 0),
@@ -53,12 +55,16 @@ class HFTrainingJob(Job):
 
     def get_model(self):
         label_encodec = torch.load(Path(self.data_path.get()) / "label_encodec.pt")
+        self.met_track = InTrainingsMetricsTracker([
+            EmotionErrorRate(),
+            BalancedEmotionErrorRate(label_encodec.classes)
+        ])
 
         return HFWav2VecCTCwithClf(
             model_loc=self.pretrained_model_path.get_path(),
             freeze_encoder=self.use_features,
             use_conv_features=self.use_features,
-            clf_hidden_dim=1024,
+            clf_hidden_dim=512 if self.use_features else 1024,
             clf_out_dim=label_encodec.class_dim,
         )
 
@@ -74,12 +80,7 @@ class HFTrainingJob(Job):
             args=self.train_args,
             train_dataset=train_data,
             data_collator=partial(pad_collate, return_dicts=True),
-            # data_collator=DataCollatorWithPadding(
-            #     tokenizer=Wav2Vec2CTCTokenizer.from_pretrained(
-            #         self.pretrained_model_path.get_path()
-            #     )
-            # )
-            # compute_metrics=compute_metrics,
+            compute_metrics=self.met_track,
         )
 
         last_checkpoint = None

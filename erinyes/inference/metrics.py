@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from enum import Enum
 
 import numpy as np
 
@@ -72,8 +71,3 @@ class BalancedEmotionErrorRate(Metric):
         if self.return_per_emotion:
             ret_val = ret_val, beers
         return ret_val
-
-
-class Metrics(Enum):
-    eer = EmotionErrorRate
-    beer = BalancedEmotionErrorRate
