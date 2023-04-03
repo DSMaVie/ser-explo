@@ -1,38 +1,68 @@
+import logging
 from pathlib import Path
 
-from erinyes.data.loader import get_data_loader
-from erinyes.inference.model_selector import ModelSelector
-from erinyes.inference.testbench import Testbench
+import torch
+from tqdm import tqdm
+from transformers import AutoModel
+
+from erinyes.data.hdf_dataset import Hdf5Dataset
 from erinyes.util.enums import Split
 from sisyphus import Job, Task, tk
+
+logger = logging.getLogger(__name__)
 
 
 class InferenceJob(Job):
     def __init__(
-        self,
-        pth_to_inf_instructs: tk.Path,
-        pth_to_model_ckpts: tk.Path,
-        pth_to_data: tk.Path,
+        self, path_to_model_ckpts: tk.Path, path_to_data: tk.Path, rqmts: dict
     ):
-        self.model_pth = Path(pth_to_model_ckpts)
-        self.data_pth = Path(pth_to_data)
-        self.inst_pth = Path(pth_to_inf_instructs)
+        self.model_path = Path(path_to_model_ckpts)
+        self.data_path = Path(path_to_data)
+        self.rqmts = rqmts
 
-        self.pred_out = self.output_path("predictions", directory=True)
-        self.out = self.output_var("results")
+        self.pred_out = self.output_path("inferences", directory=True)
+        self.class_labels = self.output_var("class_labels.txt", pickle=True)
 
-    def pick_models(self):
-        selector = ModelSelector(self.model_pth, self.pred_out)
-        selector.pick_models()
+    def run(self):
+        # select_classes
+        le = torch.load(self.data_path / "label_encodec.pt")
+        self.class_labels.set(le.classes)
 
-        test_data = get_data_loader(self.data_pth, batch_size=128, split=Split.TEST)
-        selector.predict(test_data=test_data)
+        # select_models
+        cp_num = 0
+        for cp in self.model_path.iterdir():
+            cp_parts = cp.stem.split("-")
+            if not cp_parts[0] == "checkpoint":
+                continue
 
-    def analyze_models(self):
-        tb = Testbench.from_yaml(self.inst_pth)
-        res = tb.test(self.pred_out)
-        self.out.set(res)
+            logger.info(f"found cb {cp_parts}")
+            cp_num = int(cp_parts[1]) if int(cp_parts[1]) > cp_num else cp_num
+
+        logger.info(f"found cp from step {cp_num}")
+        self.model_path = self.model_path / "training" / f"checkpoint-{cp_num}"
+        logger.info(f"model path is now set to {self.model_path}")
+
+        # write inferences to disk
+        model = AutoModel.from_pretrained(self.model_path).to("cuda")
+        logger.info(f"found model {model} at cp at {self.model_path}")
+        model.eval()
+        for split in Split:
+            data = Hdf5Dataset(
+                src_path=self.data_path / "processed_data.h5", split=split
+            )
+            logger.info(f"data loaded for split {split}")
+            for idx in tqdm(data.available_indices, desc=f"Infering on Split {split}"):
+                x, y = data[idx]
+                x.to("cuda")  # dirty
+                model_out = model(input_values=x)
+                hidden_states = model_out.hidden_states.to("cpu").numpy()
+
+                with (
+                    Path(self.pred_out.get_path()) / split.name.lower() / f"{idx}.txt"
+                ).open("w") as file:
+                    file.write(f"{y:d};{','.join(model_out.logits)}\n")
+                    hid_iter = (",".join(hs) + "\n" for hs in hidden_states)
+                    file.writelines(hid_iter)
 
     def tasks(self):
-        yield Task("pick_models")
-        yield Task("analyze_models")
+        yield Task("run")

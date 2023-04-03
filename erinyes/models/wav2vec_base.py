@@ -1,32 +1,32 @@
 from __future__ import annotations
 
 import logging
+from collections import OrderedDict
 
 from torch import nn, softmax
 import torch
 from torch.nn.functional import cross_entropy
-from transformers import Wav2Vec2ForCTC, Wav2Vec2Model
+from transformers import Wav2Vec2ForCTC, Wav2Vec2Model, Wav2Vec2Config
 from transformers.modeling_outputs import SequenceClassifierOutput
 
 logger = logging.getLogger(__name__)
 
 
-class HFWav2VecCTCwithClf(nn.Module):
+class HFWav2VecCTCwithClf(Wav2Vec2ForCTC):
     def __init__(
         self,
-        model_loc: str,
+        config: Wav2Vec2Config,
         clf_hidden_dim: int,
         clf_out_dim: int,
         freeze_encoder: bool = False,
         use_conv_features: bool = False,
     ) -> None:
-        super().__init__()
+        super().__init__(config)
 
-        full_model = Wav2Vec2ForCTC.from_pretrained(model_loc)
         self.encoder = (
-            full_model.wav2vec2
+            self.wav2vec2
             if not use_conv_features
-            else full_model.wav2vec2.feature_extractor
+            else self.wav2vec2.feature_extractor
         )
 
         self.classifier = nn.Sequential(
@@ -34,6 +34,11 @@ class HFWav2VecCTCwithClf(nn.Module):
             nn.Linear(out_features=clf_out_dim, in_features=clf_hidden_dim),
         )
         self.return_conv_features = use_conv_features
+
+        self._modules = OrderedDict({
+            "encoder": self.encoder,
+            "classifier": self.classifier
+        })
 
         for param in self.encoder.parameters():
             param.requires_grad = not freeze_encoder
@@ -59,8 +64,6 @@ class HFWav2VecCTCwithClf(nn.Module):
 
         return SequenceClassifierOutput(hidden_states=w2v_out, logits=logits, loss=loss)
 
-    def gradient_checkpointing_enable(self):
-        self.encoder.gradient_checkpointing_enable()
 
     def __repr__(self):
         return self.__class__.__name__

@@ -47,7 +47,6 @@ class HFTrainingJob(Job):
             do_train=True,
             num_train_epochs=5,
             # gradient_checkpointing=True,
-            save_strategy="epoch",
             dataloader_num_workers=self.rqmts.get("cpus", 0),
             report_to="tensorboard",
             overwrite_output_dir=True,
@@ -60,8 +59,8 @@ class HFTrainingJob(Job):
             BalancedEmotionErrorRate(label_encodec.classes)
         ])
 
-        return HFWav2VecCTCwithClf(
-            model_loc=self.pretrained_model_path.get_path(),
+        return HFWav2VecCTCwithClf.from_pretrained(
+            self.pretrained_model_path.get_path(),
             freeze_encoder=self.use_features,
             use_conv_features=self.use_features,
             clf_hidden_dim=512 if self.use_features else 1024,
