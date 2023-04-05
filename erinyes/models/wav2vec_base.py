@@ -3,10 +3,10 @@ from __future__ import annotations
 import logging
 from collections import OrderedDict
 
-from torch import nn, softmax
 import torch
+from torch import nn, softmax
 from torch.nn.functional import cross_entropy
-from transformers import Wav2Vec2ForCTC, Wav2Vec2Model, Wav2Vec2Config
+from transformers import Wav2Vec2Config, Wav2Vec2ForCTC, Wav2Vec2Model
 from transformers.modeling_outputs import SequenceClassifierOutput
 
 logger = logging.getLogger(__name__)
@@ -24,9 +24,7 @@ class HFWav2VecCTCwithClf(Wav2Vec2ForCTC):
         super().__init__(config)
 
         self.encoder = (
-            self.wav2vec2
-            if not use_conv_features
-            else self.wav2vec2.feature_extractor
+            self.wav2vec2 if not use_conv_features else self.wav2vec2.feature_extractor
         )
 
         self.classifier = nn.Sequential(
@@ -35,10 +33,9 @@ class HFWav2VecCTCwithClf(Wav2Vec2ForCTC):
         )
         self.return_conv_features = use_conv_features
 
-        self._modules = OrderedDict({
-            "encoder": self.encoder,
-            "classifier": self.classifier
-        })
+        self._modules = OrderedDict(
+            {"encoder": self.encoder, "classifier": self.classifier}
+        )
 
         for param in self.encoder.parameters():
             param.requires_grad = not freeze_encoder
@@ -48,22 +45,23 @@ class HFWav2VecCTCwithClf(Wav2Vec2ForCTC):
 
         if self.return_conv_features:
             # logger.info(f"got encoder output of shape {w2v_out.shape}")
-            w2v_out = w2v_out.transpose(1, 2)
+            hidden_states = w2v_out.transpose(1, 2)
             # feature and seq dim swapped for some reason. hf implementation does this here as well
         else:
             # logger.info(f"got encoder out of sape {w2v_out.last_hidden_state.shape}")
-            w2v_out = w2v_out.last_hidden_state
+            hidden_states = w2v_out.last_hidden_state
 
-        w2v_out = torch.mean(w2v_out, dim=1)
-        logits = self.classifier(w2v_out)
+        mpooled_hs = torch.mean(hidden_states, dim=1)
+        logits = self.classifier(mpooled_hs)
 
         loss = None
         if labels is not None:
             pred = softmax(logits, dim=1)
             loss = cross_entropy(pred, labels.long())
 
-        return SequenceClassifierOutput(hidden_states=w2v_out, logits=logits, loss=loss)
-
+        return SequenceClassifierOutput(
+            hidden_states=hidden_states, logits=logits, loss=loss
+        )
 
     def __repr__(self):
         return self.__class__.__name__

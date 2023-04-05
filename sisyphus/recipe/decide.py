@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import itertools
+import logging
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from erinyes.inference.metrics import BalancedEmotionErrorRate, EmotionErrorRate, Metric
+from erinyes.inference.metrics import (BalancedEmotionErrorRate,
+                                       EmotionErrorRate)
 from erinyes.util.enums import Split
-from sisyphus import Job, tk
+from sisyphus import Job, tk, Task
+
+logger = logging.getLogger(__name__)
 
 
 class UtteranceLevelDecisionJob(Job):
@@ -23,55 +27,62 @@ class UtteranceLevelDecisionJob(Job):
         self.result = self.output_var("results.txt")
 
     def run(self):
-        self.decisions = {}
+        dec_list = []
         for path in self.path_to_inferences.rglob("*.txt"):
             idx_split = path.parts.index("inferences") + 1
             split = path.parts[idx_split]
             idx = path.parts[idx_split + 1 :]
 
             # remove ending and join
-            idx[-1] = idx[-1].split(".")[0]
             idx = "/".join(idx)
+            idx = idx.split(".")[0]
 
             # read and compute results
             with path.open("r") as file:
                 line = file.readline()
+                logger.info(f"found data {line} at {file.name}")
                 true, logits = line.split(";")
 
                 logits = logits.split(",")
                 pred = self.decide(logits)
 
-                self.decisions.update(
+                dec_list.append(
                     {"idx": idx, "true": true, "pred": pred, "split": split}
                 )
 
-        self.decisions = pd.DataFrame.from_records(self.decisions)
-        self.metrics = [
+        dec_frame = pd.DataFrame.from_records(dec_list)
+        logger.info(f"got decisisons {dec_frame.head().to_string()}")
+
+        metrics = [
             EmotionErrorRate(),
             BalancedEmotionErrorRate(classes=self.classes),
         ]
-        self.decisions.to_csv(Path(self.output_path) / "decisions.csv")
+        dec_frame.to_csv(Path(self.decisions) / "decisions.csv")
 
-    def compute_metrics(self):
-        results = {}
-        for metric, split in itertools.product(self.metrics, Split):
-            dec = self.decisions.query("split = @split")
+        # compute_metrics
+        results = []
+        for metric, split in itertools.product(metrics, Split):
+            dec = dec_frame.query(f"split == {split.name.lower()!r}")
 
             metric.track(dec.pred.values, dec.true.values)
-            results.update(
+            results.append(
                 {
-                    "split": split,
+                    "split": split.name.lower(),
                     "metric": metric.__class__.__name__,
                     "value": metric.calc(),
                 }
             )
             metric.reset()
 
-        results = pd.DataFrame.from_records(results)
-        results = results.pivot(index="metric", columns="split", values="values")
-        self.result.set(str(results))
+        results = pd.DataFrame(results)
+        results = results.pivot(index="metric", columns="split", values="value")
+        logger.info(f"got results {results.to_string()}")
+        self.result.set(results.to_string())
+
+    def tasks(self):
+        yield Task("run")
 
 
 class ArgMaxDecision(UtteranceLevelDecisionJob):
-    def decide(logits: list[float]) -> int:
+    def decide(self, logits: list[float]) -> int:
         return np.argmax(logits)

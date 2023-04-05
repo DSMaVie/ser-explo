@@ -41,34 +41,45 @@ class HFTrainingJob(Job):
         self.use_features = use_features
 
         self.out_path = self.output_path("training")
+        self.model_args = self.output_var("model_args.pkl", pickle=True)
+        self.model_class = self.output_var("model_class.pkl",pickle=True)
 
         self.train_args = TrainingArguments(
             output_dir=self.out_path.get_path(),
             do_train=True,
             num_train_epochs=5,
-            # gradient_checkpointing=True,
+            gradient_checkpointing=True,
+            save_steps=100,
             dataloader_num_workers=self.rqmts.get("cpus", 0),
             report_to="tensorboard",
             overwrite_output_dir=True,
         )
 
-    def get_model(self):
+    def prepare_training(self):
         label_encodec = torch.load(Path(self.data_path.get()) / "label_encodec.pt")
         self.met_track = InTrainingsMetricsTracker([
             EmotionErrorRate(),
             BalancedEmotionErrorRate(label_encodec.classes)
         ])
 
-        return HFWav2VecCTCwithClf.from_pretrained(
+        model_args = {
+            "freeze_encoder":self.use_features,
+            "use_conv_features":self.use_features,
+            "clf_hidden_dim":512 if self.use_features else 1024,
+            "clf_out_dim":label_encodec.class_dim,
+        }
+        self.model_args.set(model_args)
+
+        model_class = HFWav2VecCTCwithClf
+        self.model_class.set(model_class)
+
+        return model_class.from_pretrained(
             self.pretrained_model_path.get_path(),
-            freeze_encoder=self.use_features,
-            use_conv_features=self.use_features,
-            clf_hidden_dim=512 if self.use_features else 1024,
-            clf_out_dim=label_encodec.class_dim,
+            **model_args
         )
 
     def run(self):
-        model = self.get_model()
+        model = self.prepare_training()
         train_data = Hdf5Dataset(
             src_path=self.data_path.get_path() + "/processed_data.h5",
             split=Split.TRAIN,

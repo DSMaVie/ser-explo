@@ -59,7 +59,7 @@ class BalancedEmotionErrorRate(Metric):
         ), f"EmotionErrorRate requires same shapes: {self.pred.shape} (pred) != {self.true.shape} (true)"
 
         beers = {}
-        for val in self.classes:
+        for val in range(len(self.classes)):
             true_hits = self.true == val
             pred_hits = self.pred == val
 
