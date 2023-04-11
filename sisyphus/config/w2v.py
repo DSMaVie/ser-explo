@@ -46,7 +46,7 @@ def run_lj_baseline():
         train_job = train_job(
             data_path=pp_job.out_path,
             pretrained_model_path=model_dl_job.out,
-            rqmts={"cpu": 4, "mem": 16, "gpu": 1, "time": 24},
+            rqmts={"cpu": 4, "mem": 20, "gpu": 1, "time": 24},
             profile_first=False,
         )
         # tk.register_output(f"/{pp_job.processor.name}/{train_desc}", train_job.out_path)

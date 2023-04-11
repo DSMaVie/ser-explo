@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 
-from transformers import Wav2Vec2ForCTC, Wav2Vec2Model, Wav2Vec2Processor
+from transformers import (Wav2Vec2ForCTC, Wav2Vec2Model,
+                          Wav2Vec2PhonemeCTCTokenizer, Wav2Vec2Processor)
 
 from sisyphus import Job, Task
 
@@ -39,3 +41,13 @@ class DownloadPretrainedModelJob(Job):
 
     def tasks(self):
         yield Task("download", rqmt=self.rqmts)
+
+
+class DownloadPretrainedModelWithPhonemeTokenzier(DownloadPretrainedModelJob):
+    def download(self):
+        super().download()
+        logger.info("overwriting tokenizer with phoneme tokenizer")
+        logger.info(os.environ)
+        Wav2Vec2PhonemeCTCTokenizer.from_pretrained(
+            "facebook/wav2vec2-xlsr-53-espeak-cv-ft"
+        ).save_pretrained(Path(self.out))

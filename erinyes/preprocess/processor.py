@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import torch
 from tqdm import tqdm
+from transformers.tokenization_utils import PreTrainedTokenizer
 
 from erinyes.data.labels import LabelEncodec
 from erinyes.util.enums import Dataset
@@ -36,12 +37,28 @@ RecipeType = TypeVar("RecipeType", PreproFunc, LabelEncodec, FeatureExtractor)
 class PreproRecipe(Generic[RecipeType]):
     name: str
     instance: RecipeType
-    args: dict | None = None
+    args: dict | None = None  # args created during definition of step
+    delayed_args: list[str] | None = None  # args created shortly before instance
 
-    def create_instance(self):
+    def create_instance(self, delayed_args: dict[str, any] | None = None):
+        args = dict()
+
+        if delayed_args is not None and len(delayed_args) != 0:
+            for k in delayed_args:
+                if k not in self.delayed_args:
+                    raise ValueError(
+                        f" delayed argument {k} not registered for step {self.name}"
+                    )
+
+            args.update(delayed_args)
+
         if self.args is not None:
-            return self.instance(**self.args)
-        return self.instance()
+            args.update(self.args)
+
+        if len(args) == 0:
+            return self.instance()
+
+        return self.instance(**args)
 
 
 @dataclass
@@ -52,10 +69,22 @@ class Preprocessor:
     feature_extractor: PreproRecipe[FeatureExtractor]
     label_encodec: PreproRecipe[LabelEncodec]
 
-    def run_preprocessing(self, data: pd.DataFrame):
+    def run_preprocessing(
+        self, data: pd.DataFrame, delayed_args: dict[str, any] | None = None
+    ):
         for step in self.steps:
-            logger.info(f"instantiating step {step.name} with args {step.args}")
-            processor = step.create_instance()
+            logger.info(
+                f"instantiating step {step.name} with args {step.args} and delayed args {step.delayed_args}"
+            )
+
+            this_steps_delayed_args = dict()
+            if delayed_args is not None and len(step.delayed_args) != 0:
+                for key, arg in delayed_args:
+                    step_name, arg_name = key.split(":")
+                    if step_name == step.name:
+                        this_steps_delayed_args.update({arg_name: arg})
+
+            processor = step.create_instance(**this_steps_delayed_args)
 
             logger.info(f"running data through processor {step.name}")
             data = processor.run(data)

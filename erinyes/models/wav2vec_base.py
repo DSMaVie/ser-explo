@@ -67,34 +67,3 @@ class HFWav2VecCTCwithClf(Wav2Vec2ForCTC):
         return self.__class__.__name__
 
 
-### DEPRECTATED ###
-class Wav2Vec(nn.Module):
-    def __init__(
-        self,
-        model_loc: str,
-        frozen: bool = False,
-        classifier: nn.Module | None = None,
-        return_conv_features: bool = False,
-    ) -> None:
-        raise NotImplementedError
-        super().__init__()
-
-        self.encoder = Wav2Vec2Model.from_pretrained(model_loc)
-        self.classifier = classifier
-        self.return_conv_features = return_conv_features
-
-        for param in self.encoder.parameters():
-            param.requires_grad = not frozen
-
-    def forward(self, x):
-        w2v_out = self.encoder(x)
-
-        if self.return_conv_features:
-            x = w2v_out.extract_features
-        else:
-            x = w2v_out.last_hidden_state
-
-        if not self.classifier:
-            return x
-
-        return self.classifier(x)

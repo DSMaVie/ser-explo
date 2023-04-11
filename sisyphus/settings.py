@@ -94,6 +94,10 @@ DEFAULT_ENVIRONMENT_SET["LD_LIBRARY_PATH"] = ":".join(
     ]
 )
 
+DEFAULT_ENVIRONMENT_SET[
+    "PHONEMIZER_ESPEAK_LIBRARY"
+] = "/u/vieweg/.local/lib/libespeak-ng.so"
+
 DEFAULT_ENVIRONMENT_SET["PATH"] = (
     "/usr/local/cuda-10.1/bin:" + DEFAULT_ENVIRONMENT_SET["PATH"]
 )

@@ -3,6 +3,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod, abstractproperty
 from typing import Generic, TypeVar
 
+import transformers
+
 LabelType = TypeVar("LabelType")
 EncLabelType = TypeVar("EncLabelType")
 
@@ -48,6 +50,25 @@ class IntEncodec(LabelEncodec[str, int]):
     @property
     def is_mhe(self) -> bool:
         return False
+
+
+class SeqIntEncodec(LabelEncodec["list[str, str]", list]):
+    def __init__(
+        self, tokenizer: transformers.PreTrainedTokenizer, classes: list[str]
+    ) -> None:
+        super().__init__()
+
+        self.tokenizer = tokenizer
+        self.classes = classes
+
+    def encode(self, label: list[str, str]) -> list[str]:
+        phoneme_seq, emotion = label
+        emo_index = self.classes.index(emotion)
+        # todo exceptions! like unknown tokens etc
+        return [phon + "_" + emo_index for phon in phoneme_seq]
+
+    def decode(self, label: list[str]) -> list[str, str]:
+        return [l.split("_") for l in label]
 
 
 # class LabelEncodec:

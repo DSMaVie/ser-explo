@@ -17,7 +17,8 @@ class PreprocessingJob(Job):
     def run(self):
         assert hasattr(self, "processor"), "Job needs to have an initialized processor."
 
-        self.preset()
+        delayed_args = self.preset()
+
         src_path = Env.load().RAW_DIR / self.processor.src.name.lower()
 
         data = pd.read_csv(src_path / "manifest.csv")
@@ -31,7 +32,7 @@ class PreprocessingJob(Job):
             label_target=self.label_column.get(),
             identifier=self.utterance_idx.get(),
             out_path=Path(self.out_path),
-            src_path=src_path,
+            src_path=src_path
         )
 
     def tasks(self):
