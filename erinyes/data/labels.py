@@ -54,21 +54,50 @@ class IntEncodec(LabelEncodec[str, int]):
 
 class SeqIntEncodec(LabelEncodec["list[str, str]", list]):
     def __init__(
-        self, tokenizer: transformers.PreTrainedTokenizer, classes: list[str]
+        self, tokenizer: transformers.Wav2Vec2PhonemeCTCTokenizer, classes: list[str]
     ) -> None:
         super().__init__()
 
         self.tokenizer = tokenizer
         self.classes = classes
 
-    def encode(self, label: list[str, str]) -> list[str]:
-        phoneme_seq, emotion = label
-        emo_index = self.classes.index(emotion)
-        # todo exceptions! like unknown tokens etc
-        return [phon + "_" + emo_index for phon in phoneme_seq]
+        self.special_tokens = self.tokenizer.all_special_tokens
+        self.special_token_ids = self.tokenizer.all_special_ids
 
-    def decode(self, label: list[str]) -> list[str, str]:
-        return [l.split("_") for l in label]
+    def encode(self, phonemes: str, Emotion: str) -> list[int]:
+        emo_index = self.classes.index(Emotion)
+
+        phoneme_ids = (
+            self.tokenizer._convert_token_to_id(tok) for tok in phonemes.split(" ")
+        )
+        emo_enriched_phoneme_ids = [
+            tok_id * (emo_index + 1)  # case emotionally relevant
+            if (tok_id not in self.special_token_ids)  # check case
+            else tok_id  # case not emotionally relevant aka special token
+            for tok_id in phoneme_ids
+        ]
+        return emo_enriched_phoneme_ids
+
+    def decode(self, label: list[int]) -> list[tuple[str, str]]:
+        decoupled_ids = (
+            divmod(tok_id) if tok_id not in self.special_token_ids else (None, tok_id)
+            for tok_id in label
+        )
+        decoded_ids = [
+            (self.tokenizer.decode(phone_id), self.classes[emo_id])
+            if emo_id is not None
+            else (self.tokenizer.decode(phone_id), None)
+            for phone_id, emo_id in decoupled_ids
+        ]
+        return decoded_ids
+
+    def is_mhe(self) -> bool:
+        return False
+
+    def class_dim(self) -> int:
+        return (
+            self.tokenizer.vocab_size - len(self.tokenizer.all_special_tokens)
+        ) * len(self.classes) + len(self.tokenizer.all_special_tokens)
 
 
 # class LabelEncodec:

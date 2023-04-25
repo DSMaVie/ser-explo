@@ -40,14 +40,14 @@ class HFWav2VecCTCwithClf(Wav2Vec2ForCTC):
         for param in self.encoder.parameters():
             param.requires_grad = not freeze_encoder
 
-    def forward(self, input_values, labels=None):
-        w2v_out = self.encoder(input_values)
-
+    def forward(self, input_values, labels=None, attention_mask=None):
         if self.return_conv_features:
+            w2v_out = self.encoder(input_values)
             # logger.info(f"got encoder output of shape {w2v_out.shape}")
             hidden_states = w2v_out.transpose(1, 2)
             # feature and seq dim swapped for some reason. hf implementation does this here as well
         else:
+            w2v_out = self.encoder(input_values, attention_mask)
             # logger.info(f"got encoder out of sape {w2v_out.last_hidden_state.shape}")
             hidden_states = w2v_out.last_hidden_state
 
@@ -65,5 +65,3 @@ class HFWav2VecCTCwithClf(Wav2Vec2ForCTC):
 
     def __repr__(self):
         return self.__class__.__name__
-
-

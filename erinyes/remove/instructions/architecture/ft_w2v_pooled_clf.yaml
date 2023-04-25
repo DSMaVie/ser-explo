@@ -1,9 +1,0 @@
-model: w2v_ctc
-model_loc:
-frozen: False
-return_conv_features: False
-classifier:
-  model: pooled_seq_clf
-  out_dim:
-  is_mhe:
-  hidden_dim: 1024

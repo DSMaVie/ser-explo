@@ -1,9 +1,10 @@
+import itertools
 from pathlib import Path
 
 from transformers import Wav2Vec2PhonemeCTCTokenizer
 
 from erinyes.data.features import NormalizedRawAudio
-from erinyes.data.labels import IntEncodec
+from erinyes.data.labels import IntEncodec, SeqIntEncodec
 from erinyes.preprocess.processor import Preprocessor, PreproRecipe
 from erinyes.preprocess.steps import (
     ConditionalSplitter,
@@ -103,18 +104,24 @@ class RavdessW2VPreproJobWithText(PreprocessingJob):
                 "raw_extractor", NormalizedRawAudio, args={"resample_to": 16_000}
             ),
             label_encodec=PreproRecipe(
-                "integer_encoding", IntEncodec, args={"classes": EMOTIONS}
+                "emo_enriched_phoneme_encoding",
+                SeqIntEncodec,
+                args={"classes": EMOTIONS},
+                delayed_args=["tokenizer"],
             ),
         )
 
     def preset(self):
         self.utterance_idx.set("file_idx")
-        self.label_column.set("Emotion")
+        self.label_column.set(("Emotion", "phonemes"))
 
         tok = Wav2Vec2PhonemeCTCTokenizer.from_pretrained(self.path_to_tokenizer)
         delayed_args = dict()
-        for step in self.processor.step:
-            if "tokenizer" in step.delayed_args:
+        for step in itertools.chain(
+            self.processor.steps,
+            [self.processor.feature_extractor, self.processor.label_encodec],
+        ):
+            if step.delayed_args is not None and "tokenizer" in step.delayed_args:
                 delayed_args.update({f"{step.name}:tokenizer": tok})
 
         return delayed_args

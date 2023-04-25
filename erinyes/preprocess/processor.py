@@ -69,6 +69,21 @@ class Preprocessor:
     feature_extractor: PreproRecipe[FeatureExtractor]
     label_encodec: PreproRecipe[LabelEncodec]
 
+    def _hydrate_recipe(
+        self, step: PreproRecipe, delayed_args: dict[str, any] | None = None
+    ):
+        this_steps_delayed_args = dict()
+        if (
+            delayed_args is not None
+            and step.delayed_args is not None
+            and len(step.delayed_args) != 0
+        ):
+            for key, arg in delayed_args.items():
+                step_name, arg_name = key.split(":")
+                if step_name == step.name:
+                    this_steps_delayed_args.update({arg_name: arg})
+        return step.create_instance(this_steps_delayed_args)
+
     def run_preprocessing(
         self, data: pd.DataFrame, delayed_args: dict[str, any] | None = None
     ):
@@ -77,14 +92,7 @@ class Preprocessor:
                 f"instantiating step {step.name} with args {step.args} and delayed args {step.delayed_args}"
             )
 
-            this_steps_delayed_args = dict()
-            if delayed_args is not None and len(step.delayed_args) != 0:
-                for key, arg in delayed_args:
-                    step_name, arg_name = key.split(":")
-                    if step_name == step.name:
-                        this_steps_delayed_args.update({arg_name: arg})
-
-            processor = step.create_instance(**this_steps_delayed_args)
+            processor = self._hydrate_recipe(step, delayed_args=delayed_args)
 
             logger.info(f"running data through processor {step.name}")
             data = processor.run(data)
@@ -92,10 +100,12 @@ class Preprocessor:
         logger.info(f"processing of manifest complete.")
         return data
 
-    def extractor_encodec_factory(self):
+    def extractor_encodec_factory(self, delayed_args: dict[str, any] | None = None):
         logger.info("creating of feature extractor and label encodec.")
-        extractor = self.feature_extractor.create_instance()
-        encodec = self.label_encodec.create_instance()
+        extractor = self._hydrate_recipe(
+            self.feature_extractor, delayed_args=delayed_args
+        )
+        encodec = self._hydrate_recipe(self.label_encodec, delayed_args=delayed_args)
         return extractor, encodec
 
     def serialize(
@@ -103,7 +113,7 @@ class Preprocessor:
         data: pd.DataFrame,
         feature_extractor: FeatureExtractor,
         label_encodec: LabelEncodec,
-        label_target: str,
+        label_targets: str | list[str],
         identifier: str | list[str],
         out_path: Path,
         src_path: Path,
@@ -111,7 +121,10 @@ class Preprocessor:
         if isinstance(identifier, str):
             identifier = [identifier]
 
-        for col in ["split", label_target, *identifier]:
+        if isinstance(label_targets, str):
+            label_targets = [label_targets]
+
+        for col in ["split", *label_targets, *identifier]:
             if col not in data.columns:
                 raise ValueError(f"could not find {col} in columns of manifest.")
 
@@ -131,14 +144,20 @@ class Preprocessor:
                     start=start,
                     duration=duration,
                 )
-                label = label_encodec.encode(row[label_target])
+
+                labels = {target: row[target] for target in label_targets}
+                enc_labels = label_encodec.encode(
+                    **labels if len(labels) > 1 else labels.values()[0]
+                )
 
                 groupkeys = "/".join([row.split] + [str(row[k]) for k in identifier])
                 grp = file.create_group(groupkeys)
                 grp.create_dataset("features", data=features)
                 grp.create_dataset(
                     "label",
-                    data=(label,) if not isinstance(label, np.ndarray) else label,
+                    data=(enc_labels,)
+                    if not isinstance(enc_labels, np.ndarray)
+                    else labels,
                 )
 
         data.to_csv(out_path / "manifest.csv")

@@ -37,5 +37,7 @@ class DataAnalysisJob(Job):
         # self.raw_metrics.set(result)
         self.stats.set(stats.to_string())
 
+
+
     def tasks(self):
         yield Task("run", mini_task=True)

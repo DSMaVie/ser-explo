@@ -22,17 +22,17 @@ class PreprocessingJob(Job):
         src_path = Env.load().RAW_DIR / self.processor.src.name.lower()
 
         data = pd.read_csv(src_path / "manifest.csv")
-        processed_data = self.processor.run_preprocessing(data)
-        fe, le = self.processor.extractor_encodec_factory()
+        processed_data = self.processor.run_preprocessing(data, delayed_args)
+        fe, le = self.processor.extractor_encodec_factory(delayed_args)
 
         self.processor.serialize(
             data=processed_data,
             feature_extractor=fe,
             label_encodec=le,
-            label_target=self.label_column.get(),
+            label_targets=self.label_column.get(),
             identifier=self.utterance_idx.get(),
             out_path=Path(self.out_path),
-            src_path=src_path
+            src_path=src_path,
         )
 
     def tasks(self):
