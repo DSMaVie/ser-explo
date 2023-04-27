@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import logging
+
 import numpy as np
 from transformers import EvalPrediction
 
 from erinyes.inference.metrics import Metric
+
+logger = logging.getLogger(__name__)
 
 
 class InTrainingsMetricsTracker:
@@ -14,6 +18,9 @@ class InTrainingsMetricsTracker:
         """adhering to compute_metrics form hf transformers"""
         pred = np.argmax(p.predictions, axis=-1)
         true = p.label_ids
+        # logger.info(
+        #     f"got predictions {pred} and labels {true} for hstates {p.predictions}"
+        # )
 
         res_dict = {}
         for metric in self.metrics:

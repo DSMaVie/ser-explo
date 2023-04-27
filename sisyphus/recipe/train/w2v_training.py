@@ -6,18 +6,14 @@ from functools import partial
 from pathlib import Path
 
 import torch
-from transformers import (
-    Seq2SeqTrainer,
-    Seq2SeqTrainingArguments,
-    Trainer,
-    TrainingArguments,
-    Wav2Vec2ForCTC,
-)
+from transformers import (Seq2SeqTrainer, Seq2SeqTrainingArguments, Trainer,
+                          TrainingArguments, Wav2Vec2ForCTC)
 from transformers.trainer_utils import get_last_checkpoint
 
 from erinyes.data.hdf_dataset import Hdf5Dataset
 from erinyes.data.loader import pad_collate
-from erinyes.inference.metrics import BalancedEmotionErrorRate, EmotionErrorRate
+from erinyes.inference.metrics import (BalancedEmotionErrorRate,
+                                       EmotionErrorRate)
 from erinyes.inference.metrics_tracker import InTrainingsMetricsTracker
 from erinyes.models.wav2vec_base import HFWav2Vec2withClf
 from erinyes.util.enums import Split
@@ -55,6 +51,7 @@ class HFTrainingJob(Job):
             gradient_checkpointing=True,
             per_device_train_batch_size=4,
             per_device_eval_batch_size=4,
+            gradient_accumulation_steps=2,
             save_steps=10,
             logging_steps=10,
             eval_steps=10,
@@ -114,6 +111,9 @@ class HFTrainingJob(Job):
         )
 
         last_checkpoint = None
+        logger.info(
+            f" got out dir {self.train_args.output_dir}, do_train = {self.train_args.do_train}, overwrite = {self.train_args.overwrite_output_dir}, resume = {self.train_args.resume_from_checkpoint}, outdir content = {os.listdir(self.train_args.output_dir)}"
+        )
         if (
             os.path.isdir(self.train_args.output_dir)
             and self.train_args.do_train

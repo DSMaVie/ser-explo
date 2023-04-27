@@ -26,6 +26,7 @@ class HFWav2Vec2withClf(Wav2Vec2Model):
             nn.Linear(out_features=clf_hidden_dim, in_features=clf_hidden_dim),
             nn.Tanh(),
             nn.Linear(out_features=clf_out_dim, in_features=clf_hidden_dim),
+            nn.ReLU()
         )
         self.return_conv_features = use_conv_features
 
