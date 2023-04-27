@@ -23,7 +23,7 @@ class Metric(ABC):
             self.true = true
 
     @abstractmethod
-    def calc(self) -> float:
+    def calc(self) -> dict[str, float]:
         ...
 
     def reset(self):
@@ -41,9 +41,9 @@ class EmotionErrorRate(Metric):
             self.true.shape == self.pred.shape
         ), f"EmotionErrorRate requires same shapes: {self.pred.shape} (pred) != {self.true.shape} (true)"
 
-        errors = sum(self.true != self.pred)
-        totals = sum(self.true.shape)
-        return errors / totals
+        errors = np.sum(np.not_equal(self.true, self.pred))
+        totals = np.sum(self.true.shape)
+        return {"eer": errors / totals}
 
 
 class BalancedEmotionErrorRate(Metric):
@@ -53,21 +53,24 @@ class BalancedEmotionErrorRate(Metric):
         self.classes = classes
         self.return_per_emotion = return_per_emotion
 
-    def calc(self) -> float:
+    def calc(self) -> dict[str, float]:
         assert (
             self.true.shape == self.pred.shape
         ), f"EmotionErrorRate requires same shapes: {self.pred.shape} (pred) != {self.true.shape} (true)"
 
         beers = {}
-        for val in range(len(self.classes)):
-            true_hits = self.true == val
-            pred_hits = self.pred == val
+        for idx, val in enumerate(self.classes):
+            emo_mask = self.true == idx
+            trues = self.true[emo_mask]
+            preds = self.pred[emo_mask]
 
-            errors = sum(true_hits != pred_hits)
-            totals = sum(true_hits.shape)
-            beers.update({val: errors / totals})
+            errors = np.sum(np.not_equal(trues, preds))
+            totals = np.sum(emo_mask.shape)
+            beers.update({f"beer_{val}": errors / totals})
 
-        ret_val = np.mean(list(beers.values()))
+        total = {"beer_total": np.mean(list(beers.values()))}
+
         if self.return_per_emotion:
-            ret_val = ret_val, beers
-        return ret_val
+            beers.update(total)
+            return beers
+        return total

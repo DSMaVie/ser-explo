@@ -21,6 +21,7 @@ def pad_collate(
 ):
     signals, labels = zip(*data)
     seqs = pad_sequence(signals, batch_first=True, padding_value=padding_token_id)
+    # logger.info(f"got batch {seqs} of sequences of shape {seqs.shape}")
 
     return_dict = {"input_values": seqs}
     if return_attention_mask:

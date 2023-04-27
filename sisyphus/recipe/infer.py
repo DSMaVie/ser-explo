@@ -6,7 +6,7 @@ import torch
 from tqdm import tqdm
 
 from erinyes.data.hdf_dataset import Hdf5Dataset
-from erinyes.models.wav2vec_base import HFWav2VecCTCwithClf
+from erinyes.models.wav2vec_base import HFWav2Vec2withClf
 from erinyes.util.enums import Split
 from sisyphus import Job, Task, tk
 

@@ -19,7 +19,7 @@ from erinyes.data.hdf_dataset import Hdf5Dataset
 from erinyes.data.loader import pad_collate
 from erinyes.inference.metrics import BalancedEmotionErrorRate, EmotionErrorRate
 from erinyes.inference.metrics_tracker import InTrainingsMetricsTracker
-from erinyes.models.wav2vec_base import HFWav2VecCTCwithClf
+from erinyes.models.wav2vec_base import HFWav2Vec2withClf
 from erinyes.util.enums import Split
 from sisyphus import Job, Task, tk
 
@@ -51,14 +51,17 @@ class HFTrainingJob(Job):
         self.train_args = TrainingArguments(
             output_dir=self.out_path.get_path(),
             do_train=True,
-            num_train_epochs=100,
+            num_train_epochs=25,
             gradient_checkpointing=True,
-            gradient_accumulation_steps=2,
-            save_steps=100,
-            logging_steps=100,
-            learning_rate=0.5e-5,
+            per_device_train_batch_size=4,
+            per_device_eval_batch_size=4,
+            save_steps=10,
+            logging_steps=10,
+            eval_steps=10,
+            evaluation_strategy="steps",
+            learning_rate=0.001,
             weight_decay=0.005,
-            warmup_steps=250,
+            warmup_steps=100,
             dataloader_num_workers=self.rqmts.get("cpus", 0),
             report_to="tensorboard",
             overwrite_output_dir=True,
@@ -67,7 +70,12 @@ class HFTrainingJob(Job):
     def prepare_training(self):
         label_encodec = torch.load(Path(self.data_path.get()) / "label_encodec.pt")
         self.met_track = InTrainingsMetricsTracker(
-            [EmotionErrorRate(), BalancedEmotionErrorRate(label_encodec.classes)]
+            [
+                EmotionErrorRate(),
+                BalancedEmotionErrorRate(
+                    label_encodec.classes, return_per_emotion=True
+                ),
+            ]
         )
 
         model_args = {
@@ -78,7 +86,7 @@ class HFTrainingJob(Job):
         }
         self.model_args.set(model_args)
 
-        model_class = HFWav2VecCTCwithClf
+        model_class = HFWav2Vec2withClf
         self.model_class.set(model_class)
 
         return model_class.from_pretrained(
