@@ -5,6 +5,8 @@ from pathlib import Path
 
 import librosa
 import numpy as np
+import torch
+import transformers
 
 
 class FeatureExtractor(ABC):
@@ -64,3 +66,24 @@ class NormalizedRawAudio(FeatureExtractor):
 
     def get_feature_dim(self):
         return 1
+
+
+class Wav2Vec2OutputFeatureExtractor(FeatureExtractor):
+    def __init__(
+        self,
+        model: transformers.Wav2Vec2Model,
+        resample_to: int | None = None,
+    ) -> None:
+        super().__init__()
+
+        self.resample_to = resample_to
+        self.model = model
+
+    def __apply__(self, signal: np.ndarray, sr: int) -> np.ndarray:
+        if self.resample_to:
+            signal = librosa.resample(signal, orig_sr=sr, target_sr=self.resample_to)
+
+        return torch.mean(self.model(signal).extract_features, dim=-1)
+
+    def get_feature_dim(self):
+        return self.config.model.hidden_size
