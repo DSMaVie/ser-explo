@@ -1,7 +1,7 @@
 import itertools
 from pathlib import Path
 
-from transformers import Wav2Vec2PhonemeCTCTokenizer, Wav2Vec2Model
+from transformers import Wav2Vec2Model, Wav2Vec2PhonemeCTCTokenizer
 
 from erinyes.data.features import NormalizedRawAudio, Wav2Vec2OutputFeatureExtractor
 from erinyes.data.labels import IntEncodec, SeqIntEncodec
@@ -127,7 +127,7 @@ class RavdessW2VPreproJobWithText(PreprocessingJob):
         return delayed_args
 
 
-class RavdessW2VPreproJobWithModelOutput(PreprocessingJob):
+class RavdessW2VPreproJobWithModelFeatures(PreprocessingJob):
     def __init__(self, path_to_tokenizer: tk.Path) -> None:
         super().__init__()
 
@@ -158,10 +158,13 @@ class RavdessW2VPreproJobWithModelOutput(PreprocessingJob):
                     "gather_durations",
                     GatherDurations,
                     args={"pth": "rav", "filetype": "wav"},
-                )
+                ),
             ],
             feature_extractor=PreproRecipe(
-                "model_output_extractor", Wav2Vec2OutputFeatureExtractor, args={"resample_to": 16_000}, delayed_args=["model"]
+                "model_output_extractor",
+                Wav2Vec2OutputFeatureExtractor,
+                args={"resample_to": 16_000},
+                delayed_args=["model"],
             ),
             label_encodec=PreproRecipe(
                 "integer_encoding", IntEncodec, args={"classes": EMOTIONS}
@@ -170,9 +173,9 @@ class RavdessW2VPreproJobWithModelOutput(PreprocessingJob):
 
     def preset(self):
         self.utterance_idx.set("file_idx")
-        self.label_column.set(("Emotion", "phonemes"))
+        self.label_column.set(("Emotion",))
 
-        tok = Wav2Vec2PhonemeCTCTokenizer.from_pretrained(self.path_to_tokenizer)
+        # tok = Wav2Vec2PhonemeCTCTokenizer.from_pretrained(self.path_to_tokenizer)
         model = Wav2Vec2Model.from_pretrained(self.path_to_tokenizer)
 
         delayed_args = dict()

@@ -32,7 +32,7 @@ def pad_collate(
             labels, batch_first=True, padding_value=-100
         )  # padding value of -100 is unique for hf ctc models. it wont be used for loss calc
     else:
-        return_dict["labels"] = torch.stack(labels).squeeze(dim=1)
+        return_dict["labels"] = torch.stack(labels).squeeze(dim=1).long()
 
     return return_dict
 

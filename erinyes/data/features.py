@@ -25,12 +25,11 @@ class FeatureExtractor(ABC):
             audio, sr = librosa.load(
                 pth_to_data, sr=None, offset=start, duration=duration
             )
-            return self.__apply__(audio, sr)
         except:
-            print("extract:", pth_to_data, start, duration)
             raise RuntimeError(
                 f"Extraction failed. file={pth_to_data}, start={start}, dur={duration}"
             )
+        return self.__apply__(audio, sr)
 
 
 class LogMelSpec(FeatureExtractor):
@@ -82,8 +81,8 @@ class Wav2Vec2OutputFeatureExtractor(FeatureExtractor):
     def __apply__(self, signal: np.ndarray, sr: int) -> np.ndarray:
         if self.resample_to:
             signal = librosa.resample(signal, orig_sr=sr, target_sr=self.resample_to)
-
-        return torch.mean(self.model(signal).extract_features, dim=-1)
+            signal = torch.tensor(signal).unsqueeze(dim=0)
+        return torch.mean(self.model(signal).extract_features, dim=1).detach().numpy()[0]
 
     def get_feature_dim(self):
         return self.config.model.hidden_size

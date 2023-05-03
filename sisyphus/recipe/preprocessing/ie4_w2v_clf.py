@@ -188,9 +188,9 @@ class IEM4ProcessorForWav2Vec2WithModelFeatures(PreprocessingJob):
 
     def preset(self):
         self.utterance_idx.set("file_idx")
-        self.label_column.set(("Emotion", "phonemes"))
+        self.label_column.set(("Emotion",))
 
-        tok = Wav2Vec2PhonemeCTCTokenizer.from_pretrained(self.path_to_tokenizer)
+        # tok = Wav2Vec2PhonemeCTCTokenizer.from_pretrained(self.path_to_tokenizer)
         model = Wav2Vec2Model.from_pretrained(self.path_to_tokenizer)
 
         delayed_args = dict()
@@ -198,8 +198,8 @@ class IEM4ProcessorForWav2Vec2WithModelFeatures(PreprocessingJob):
             self.processor.steps,
             [self.processor.feature_extractor, self.processor.label_encodec],
         ):
-            if step.delayed_args is not None and "tokenizer" in step.delayed_args:
-                delayed_args.update({f"{step.name}:tokenizer": tok})
+            # if step.delayed_args is not None and "tokenizer" in step.delayed_args:
+            #     delayed_args.update({f"{step.name}:tokenizer": tok})
             if step.delayed_args is not None and "model" in step.delayed_args:
                 delayed_args.update({f"{step.name}:model": model})
 
