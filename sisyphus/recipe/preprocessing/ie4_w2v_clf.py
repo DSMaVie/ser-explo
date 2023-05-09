@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import itertools
 from pathlib import Path
 
@@ -138,8 +140,8 @@ class IEM4ProcessorForWav2Vec2WithText(PreprocessingJob):
 
 
 class IEM4ProcessorForWav2Vec2WithModelFeatures(PreprocessingJob):
-    def __init__(self, path_to_tokenizer: tk.Path) -> None:
-        super().__init__()
+    def __init__(self, path_to_tokenizer: tk.Path, rqmts: dict | None = None) -> None:
+        super().__init__(rqmts=rqmts)
 
         self.path_to_tokenizer = Path(path_to_tokenizer)
 
@@ -176,7 +178,10 @@ class IEM4ProcessorForWav2Vec2WithModelFeatures(PreprocessingJob):
             feature_extractor=PreproRecipe(
                 "model_output_extractor",
                 Wav2Vec2OutputFeatureExtractor,
-                args={"resample_to": 16_000},
+                args={
+                    "resample_to": 16_000,
+                    "device": "cuda" if rqmts.get("gpu", False) else "cpu",
+                },
                 delayed_args=["model"],
             ),
             label_encodec=PreproRecipe(

@@ -67,22 +67,29 @@ class NormalizedRawAudio(FeatureExtractor):
         return 1
 
 
-class Wav2Vec2OutputFeatureExtractor(FeatureExtractor):
+class Wav2Vec2OutputFeatureExtractor(NormalizedRawAudio):
     def __init__(
         self,
         model: transformers.Wav2Vec2Model,
+        device: str = "cpu",
         resample_to: int | None = None,
+        use_znorm: bool = False,
     ) -> None:
-        super().__init__()
+        super().__init__(resample_to=resample_to, use_znorm=use_znorm)
 
-        self.resample_to = resample_to
-        self.model = model
+        self.model = model.to(device)
+        self.device = device
 
     def __apply__(self, signal: np.ndarray, sr: int) -> np.ndarray:
-        if self.resample_to:
-            signal = librosa.resample(signal, orig_sr=sr, target_sr=self.resample_to)
-            signal = torch.tensor(signal).unsqueeze(dim=0)
-        return torch.mean(self.model(signal).extract_features, dim=1).detach().numpy()[0]
+        signal = super().__apply__(signal, sr)
+        signal = torch.tensor(signal).unsqueeze(dim=0)
+        signal = signal.to(self.device)
+        return (
+            torch.mean(self.model(signal).extract_features, dim=1)
+            .detach()
+            .to(self.device)
+            .numpy()[0]
+        )
 
     def get_feature_dim(self):
         return self.config.model.hidden_size

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import itertools
 from pathlib import Path
 
@@ -128,8 +130,8 @@ class RavdessW2VPreproJobWithText(PreprocessingJob):
 
 
 class RavdessW2VPreproJobWithModelFeatures(PreprocessingJob):
-    def __init__(self, path_to_tokenizer: tk.Path) -> None:
-        super().__init__()
+    def __init__(self, path_to_tokenizer: tk.Path, rqmts: dict | None = None) -> None:
+        super().__init__(rqmts=rqmts)
 
         self.path_to_tokenizer = Path(path_to_tokenizer)
 

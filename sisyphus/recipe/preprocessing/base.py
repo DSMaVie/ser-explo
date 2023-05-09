@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 import pandas as pd
@@ -7,8 +9,10 @@ from sisyphus import Job, Task
 
 
 class PreprocessingJob(Job):
-    def __init__(self) -> None:
+    def __init__(self, rqmts: dict | None = None) -> None:
         super().__init__()
+
+        self.rqmts = rqmts
 
         self.label_column = self.output_var("label_column.txt")
         self.utterance_idx = self.output_var("utterance_idx.txt")
@@ -36,7 +40,7 @@ class PreprocessingJob(Job):
         )
 
     def tasks(self):
-        yield Task("run", mini_task=True)
+        yield Task("run", rqmt=self.rqmts)
 
     def preset(self):
         """presets settings like self.utterance_idx and self.label_column for later use. MUST BE OVERLOADED BY CHILD"""

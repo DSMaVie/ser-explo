@@ -4,8 +4,12 @@ import logging
 import os
 from pathlib import Path
 
-from transformers import (Wav2Vec2ForCTC, Wav2Vec2Model,
-                          Wav2Vec2PhonemeCTCTokenizer, Wav2Vec2Processor)
+from transformers import (
+    AutoProcessor,
+    Wav2Vec2ForCTC,
+    Wav2Vec2Model,
+    Wav2Vec2PhonemeCTCTokenizer,
+)
 
 from sisyphus import Job, Task
 
@@ -14,12 +18,17 @@ logger = logging.getLogger(__name__)
 
 class DownloadPretrainedModelJob(Job):
     def __init__(
-        self, model_name: str, is_ctc_model: bool = False, rqmts: dict | None = None
+        self,
+        model_name: str,
+        is_ctc_model: bool = False,
+        rqmts: dict | None = None,
+        just_model: bool = False,
     ) -> None:
         super().__init__()
 
         self.model_name = model_name
         self.is_ctc_model = is_ctc_model
+        self.just_model = just_model
         self.rqmts = rqmts
 
         self.out = self.output_path(self.model_name.replace("/", "_"), directory=True)
@@ -35,9 +44,10 @@ class DownloadPretrainedModelJob(Job):
 
         model.save_pretrained(model_loc)
 
-        logger.info("downloading processor alongside.")
-        processor = Wav2Vec2Processor.from_pretrained(self.model_name)
-        processor.save_pretrained(model_loc)
+        if not self.just_model:
+            logger.info("downloading processor alongside.")
+            processor = AutoProcessor.from_pretrained(self.model_name)
+            processor.save_pretrained(model_loc)
 
     def tasks(self):
         yield Task("download", rqmt=self.rqmts)

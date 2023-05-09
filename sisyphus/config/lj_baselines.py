@@ -1,3 +1,4 @@
+from functools import partial
 import logging
 
 from recipe.data_analysis import DataAnalysisJob
@@ -5,13 +6,9 @@ from recipe.decide import ArgMaxDecision
 from recipe.download_pt_model import DownloadPretrainedModelJob
 from recipe.infer import InferenceJob
 from recipe.preprocessing.ie4_w2v_clf import (
-    IEM4ProcessorForWav2Vec2,
-    IEM4ProcessorForWav2Vec2WithModelFeatures,
-)
+    IEM4ProcessorForWav2Vec2, IEM4ProcessorForWav2Vec2WithModelFeatures)
 from recipe.preprocessing.rav_w2v_clf import (
-    RavdessW2VPreproJob,
-    RavdessW2VPreproJobWithModelFeatures,
-)
+    RavdessW2VPreproJob, RavdessW2VPreproJobWithModelFeatures)
 from recipe.train.lj_fe import LJFETrainingJob
 from recipe.train.lj_ft import LJFTTrainingJob
 
@@ -20,9 +17,10 @@ from sisyphus import tk
 logger = logging.getLogger(__name__)
 
 
-def run_lj_ft_baseline():
+def run_lj_ft_baseline(base_model:str):
     model_dl_job = DownloadPretrainedModelJob(
-        "jonatasgrosman/wav2vec2-large-xlsr-53-english",
+        base_model,
+        just_model=True,
         rqmts={"cpu": 1, "mem": 10, "gpu": 0, "time": 1},
     )  # wav2vec2 xlsr ft on asr english (commonvoice)
 
@@ -45,7 +43,7 @@ def run_lj_ft_baseline():
         train_job = LJFTTrainingJob(
             data_path=pp_job.out_path,
             pretrained_model_path=model_dl_job.out,
-            rqmts={"cpu": 4, "mem": 20, "gpu": 1, "time": 24},
+            rqmts={"cpu": 4, "mem": 20, "gpu": 1, "time": 72},
             profile_first=False,
         )
         # tk.register_output(f"/{pp_job.processor.name}/{train_desc}", train_job.out_path)
@@ -69,15 +67,16 @@ def run_lj_ft_baseline():
         )
 
 
-def run_lj_fe_baseline():
+def run_lj_fe_baseline(base_model: str):
     model_dl_job = DownloadPretrainedModelJob(
-        "jonatasgrosman/wav2vec2-large-xlsr-53-english",
+        base_model,
         rqmts={"cpu": 1, "mem": 10, "gpu": 0, "time": 1},
+        just_model=True,
     )  # wav2vec2 xlsr ft on asr english (commonvoice)
 
     pp_jobs = [
-        RavdessW2VPreproJobWithModelFeatures,
-        IEM4ProcessorForWav2Vec2WithModelFeatures,
+        partial(RavdessW2VPreproJobWithModelFeatures, rqmts={"cpu": 2, "mem": 10, "time": 2}),
+        partial(IEM4ProcessorForWav2Vec2WithModelFeatures, rqmts={"cpu": 2, "mem": 10, "time": 2}),
     ]
 
     for data_pp_job in pp_jobs:

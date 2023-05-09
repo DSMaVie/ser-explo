@@ -48,14 +48,14 @@ class LJFTTrainingJob(Job):
             do_train=True,
             num_train_epochs=25,
             gradient_checkpointing=True,
-            per_device_train_batch_size=4,
-            per_device_eval_batch_size=4,
-            gradient_accumulation_steps=2,
-            save_steps=100,
+            per_device_train_batch_size=2,
+            per_device_eval_batch_size=2,
+            gradient_accumulation_steps=16,
+            save_steps=500,
             logging_steps=10,
-            eval_steps=10,
+            eval_steps=500,
             evaluation_strategy="steps",
-            learning_rate=0.001,
+            learning_rate=1e-5,
             weight_decay=0.005,
             warmup_steps=100,
             dataloader_num_workers=self.rqmts.get("cpus", 0),
@@ -89,6 +89,7 @@ class LJFTTrainingJob(Job):
 
     def run(self):
         model = self.prepare_training()
+        model.freeze_feature_encoder()
         train_data = Hdf5Dataset(
             src_path=self.data_path.get_path() + "/processed_data.h5",
             split=Split.TRAIN,

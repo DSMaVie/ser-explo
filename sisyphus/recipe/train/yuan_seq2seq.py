@@ -17,7 +17,6 @@ from erinyes.data.hdf_dataset import Hdf5Dataset
 from erinyes.data.loader import pad_collate
 from erinyes.inference.metrics import BalancedEmotionErrorRate, EmotionErrorRate
 from erinyes.inference.metrics_tracker import InTrainingsMetricsTracker
-from erinyes.models.wav2vec_base import HFWav2Vec2withClf
 from erinyes.util.enums import Split
 from sisyphus import Job, Task, tk
 
@@ -47,26 +46,31 @@ class HFSeq2SeqTrainingJob(Job):
         self.model_class = self.output_var("model_class.pkl", pickle=True)
 
         self.train_args = Seq2SeqTrainingArguments(
-            output_dir=self.out_path.get_path(),
-            do_train=True,
-            num_train_epochs=15,
-            gradient_checkpointing=True,
-            save_steps=100,
-            logging_steps=100,
-            learning_rate=0.5e-5,
-            weight_decay=0.005,
-            warmup_steps=250,
             dataloader_num_workers=self.rqmts.get("cpus", 0),
             report_to="tensorboard",
             overwrite_output_dir=True,
+            output_dir=self.out_path.get_path(),
+            do_train=True,
+            num_train_epochs=25,
+            gradient_checkpointing=True,
+            per_device_train_batch_size=2,
+            per_device_eval_batch_size=2,
+            gradient_accumulation_steps=16,
+            save_steps=500,
+            logging_steps=10,
+            eval_steps=500,
+            evaluation_strategy="steps",
+            learning_rate=1e-5,
+            weight_decay=0.005,
+            warmup_steps=100
         )
 
     def prepare_training(self):
         label_encodec = torch.load(Path(self.data_path.get()) / "label_encodec.pt")
-        # self.met_track = InTrainingsMetricsTracker([
-        #     EmotionErrorRate(),
-        #     BalancedEmotionErrorRate(label_encodec.classes)
-        # ])
+        self.met_track = InTrainingsMetricsTracker([
+            EmotionErrorRate(),
+            BalancedEmotionErrorRate(label_encodec.classes)
+        ])
 
         model_args = {
             "freeze_encoder": self.use_features,
