@@ -16,7 +16,7 @@ from sisyphus import Job, Task, tk
 logger = logging.getLogger(__name__)
 
 
-class InferenceJob(Job):
+class ClfInferenceJob(Job):
     def __init__(
         self,
         path_to_model_ckpts: tk.Path,
@@ -65,7 +65,7 @@ class InferenceJob(Job):
 
                 # logger.info(f"recieved tensor of shape {x.shape} as x. running prediction")
                 model_out = model(input_values=x)
-                hidden_states = model_out.hidden_states.cpu().detach().numpy()[0]
+                # hidden_states = model_out.cpu().detach().numpy()[0]
                 logits = model_out.logits.cpu().detach().numpy()[0]
 
                 res_string = (
@@ -76,11 +76,11 @@ class InferenceJob(Job):
                     #     f"writing results, {res_string} and hidden_states of shape {hidden_states.shape} to file {file.name}"
                     # )
                     file.write(res_string)
-                    hid_iter = (
-                        ",".join(str(h_value) for h_value in hs) + "\n"
-                        for hs in hidden_states
-                    )
-                    file.writelines(hid_iter)
+                    # hid_iter = (
+                    #     ",".join(str(h_value) for h_value in hs) + "\n"
+                    #     for hs in hidden_states
+                    # )
+                    # file.writelines(hid_iter)
 
     def tasks(self):
         yield Task("run", rqmt=self.rqmts)

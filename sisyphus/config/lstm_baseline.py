@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from recipe.infer import InferenceJob
+from recipe.infer import ClfInferenceJob
 from recipe.preprocessing import PreprocessingJob
 from recipe.train import TrainJob
 

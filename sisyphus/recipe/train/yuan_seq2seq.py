@@ -6,11 +6,7 @@ from functools import partial
 from pathlib import Path
 
 import torch
-from transformers import (
-    Seq2SeqTrainer,
-    Seq2SeqTrainingArguments,
-    Wav2Vec2ForCTC,
-)
+from transformers import Seq2SeqTrainer, Seq2SeqTrainingArguments, Wav2Vec2ForCTC
 from transformers.trainer_utils import get_last_checkpoint
 
 from erinyes.data.hdf_dataset import Hdf5Dataset
@@ -36,7 +32,7 @@ class HFSeq2SeqTrainingJob(Job):
 
         self.data_path = data_path
         self.pretrained_model_path = pretrained_model_path
-        self.rqmts = rqmts if rqmts is not None else {"cpus": 1, "mem": 1, "time": 1}
+        self.rqmts = rqmts if rqmts is not None else {"cpu": 1, "mem": 1, "time": 1}
         self.profile_first = profile_first
 
         self.use_features = use_features
@@ -46,7 +42,7 @@ class HFSeq2SeqTrainingJob(Job):
         self.model_class = self.output_var("model_class.pkl", pickle=True)
 
         self.train_args = Seq2SeqTrainingArguments(
-            dataloader_num_workers=self.rqmts.get("cpus", 0),
+            dataloader_num_workers=self.rqmts.get("cpu", 0),
             report_to="tensorboard",
             overwrite_output_dir=True,
             output_dir=self.out_path.get_path(),
@@ -62,15 +58,14 @@ class HFSeq2SeqTrainingJob(Job):
             evaluation_strategy="steps",
             learning_rate=1e-5,
             weight_decay=0.005,
-            warmup_steps=100
+            warmup_steps=100,
         )
 
     def prepare_training(self):
         label_encodec = torch.load(Path(self.data_path.get()) / "label_encodec.pt")
-        self.met_track = InTrainingsMetricsTracker([
-            EmotionErrorRate(),
-            BalancedEmotionErrorRate(label_encodec.classes)
-        ])
+        self.met_track = InTrainingsMetricsTracker(
+            [EmotionErrorRate(), BalancedEmotionErrorRate(label_encodec.classes)]
+        )
 
         model_args = {
             "freeze_encoder": self.use_features,

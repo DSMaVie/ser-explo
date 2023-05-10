@@ -9,3 +9,4 @@ def main():
     run_lj_fe_baseline("facebook/wav2vec2-large")
     run_lj_ft_baseline("facebook/wav2vec2-base-960h")
     run_lj_fe_baseline("facebook/wav2vec2-base-960h")
+    # run_yuan()

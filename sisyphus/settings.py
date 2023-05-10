@@ -1,5 +1,12 @@
 import getpass
+import importlib
 import sys
+import typing
+sys.path.append("/usr/local/")
+sys.path.append("/usr/local/cache-manager/")
+
+cm = importlib.import_module("cache-manager")
+
 
 # WORK_DIR = "work"
 # IMPORT_PATHS = ["config", "recipe/"]
@@ -41,6 +48,11 @@ def engine():
         default_engine="long",
     )
 
+
+def file_caching(file: str) -> str:
+    from sisyphus import tk
+    path = file.get_path() if isinstance(file, tk.Path) else file
+    return cm.cacheFile(path)
 
 MAIL_ADDRESS = getpass.getuser()
 

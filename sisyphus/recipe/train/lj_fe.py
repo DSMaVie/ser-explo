@@ -6,18 +6,16 @@ from functools import partial
 from pathlib import Path
 
 import torch
-from transformers import (Trainer, TrainingArguments,
-                          )
+from transformers import Trainer, TrainingArguments
 from transformers.trainer_utils import get_last_checkpoint
 
 from erinyes.data.hdf_dataset import Hdf5Dataset
 from erinyes.data.loader import pad_collate
-from erinyes.inference.metrics import (BalancedEmotionErrorRate,
-                                       EmotionErrorRate)
+from erinyes.inference.metrics import BalancedEmotionErrorRate, EmotionErrorRate
 from erinyes.inference.metrics_tracker import InTrainingsMetricsTracker
 from erinyes.models.classifier import HFPooledSeqClassifier
 from erinyes.util.enums import Split
-from sisyphus import Job, Task, tk
+from sisyphus import Job, Task, tk, global_settings as gs
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +33,7 @@ class LJFETrainingJob(Job):
 
         self.data_path = data_path
         self.pretrained_model_path = pretrained_model_path
-        self.rqmts = rqmts if rqmts is not None else {"cpus": 1, "mem": 1, "time": 1}
+        self.rqmts = rqmts if rqmts is not None else {"cpu": 1, "mem": 1, "time": 1}
         self.profile_first = profile_first
 
         self.use_features = use_features
@@ -59,7 +57,7 @@ class LJFETrainingJob(Job):
             learning_rate=0.001,
             weight_decay=0.005,
             warmup_steps=100,
-            dataloader_num_workers=self.rqmts.get("cpus", 0),
+            dataloader_num_workers=self.rqmts.get("cpu", 0),
             report_to="tensorboard",
             overwrite_output_dir=True,
         )
@@ -82,7 +80,6 @@ class LJFETrainingJob(Job):
 
         model_class = HFPooledSeqClassifier
         self.model_class.set(model_class)
-        
 
         return model_class.from_pretrained(
             self.pretrained_model_path.get_path(), **model_args
@@ -90,12 +87,17 @@ class LJFETrainingJob(Job):
 
     def run(self):
         model = self.prepare_training()
+        gs.file_caching(self.data_path.join_right("processed_data.h5"))
+        data_path = self.data_path.join_right("processed_data.h5").get_cached_path()
+        breakpoint()
+        raise NotImplementedError
+
         train_data = Hdf5Dataset(
-            src_path=self.data_path.get_path() + "/processed_data.h5",
+            src_path=data_path,
             split=Split.TRAIN,
         )
         eval_data = Hdf5Dataset(
-            src_path=self.data_path.get_path() + "/processed_data.h5",
+            src_path=data_path,
             split=Split.VAL,
         )
 
