@@ -1,7 +1,9 @@
 import logging
 from pathlib import Path
 
-# from erinyes.inference.metrics import BalancedEmotionErrorRate, EmotionErrorRate
+import torch
+
+from erinyes.inference.metrics import BalancedEmotionErrorRate, EmotionErrorRate
 from erinyes.preprocess.stats import DataAnalyzer
 from sisyphus import Job, Task, tk
 
@@ -16,28 +18,35 @@ class DataAnalysisJob(Job):
         self.label_col = label_col
 
         self.stats = self.output_var("stats")
-        # self.raw_metrics = self.output_var("raw_metrics")
+        self.raw_metrics = self.output_var("raw_metrics")
 
     def run(self):
+        label_encodec = torch.load(Path(self.path_to_data.get()) / "label_encodec.pt")
+
+        lab_col = self.label_col.get()
+        if isinstance(lab_col, tuple):
+            lab_col = lab_col[0]
+
         analyzer = DataAnalyzer(
             Path(self.path_to_data),
-            self.label_col.get(),
-            # metrics={
-            #     "eer": EmotionErrorRate(),
-            #     "beer": BalancedEmotionErrorRate(
-            #         classes=instructs.label_encodec.classes
-            #     ),
-            # },
+            lab_col,
+            metrics=[
+                EmotionErrorRate(),
+                BalancedEmotionErrorRate(
+                    classes=label_encodec.classes, return_per_emotion=True
+                ),
+            ],
         )
         analyzer.load_data()
         stats = analyzer.compute_stats()
-        # result = analyzer.compute_prior_metrics(priors) #still a bit faulty
-        # logger.info(f"got results {result}")
 
-        # self.raw_metrics.set(result)
+        # breakpoint()
+        priors = stats[stats.index.str.contains("prior")]
+        result = analyzer.compute_prior_metrics(priors)
+        logger.info(f"got results {result}")
+
+        self.raw_metrics.set(result.to_string())
         self.stats.set(stats.to_string())
-
-
 
     def tasks(self):
         yield Task("run", mini_task=True)

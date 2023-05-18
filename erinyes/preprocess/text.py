@@ -45,6 +45,9 @@ class TokenizeText:
         data["phonemes"] = data[text_keyword].progress_apply(
             lambda s: self.tokenizer.phonemize(s)
         )
+        data["phonemes"] = data["phonemes"].progress_apply(
+            lambda s: f"<s> {s[:-1]}</s>"
+        ) # add beginning and end tokens
         return data
 
 

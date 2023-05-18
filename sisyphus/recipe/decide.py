@@ -55,7 +55,7 @@ class UtteranceLevelDecisionJob(Job):
 
         metrics = [
             EmotionErrorRate(),
-            BalancedEmotionErrorRate(classes=self.classes),
+            BalancedEmotionErrorRate(classes=self.classes, return_per_emotion=True),
         ]
         dec_frame.to_csv(Path(self.decisions) / "decisions.csv")
 
@@ -65,6 +65,8 @@ class UtteranceLevelDecisionJob(Job):
             dec = dec_frame.query(f"split == {split.name.lower()!r}")
 
             metric.track(dec.pred.values, dec.true.values)
+            results = metric.calc()
+            # here
             results.append(
                 {
                     "split": split.name.lower(),

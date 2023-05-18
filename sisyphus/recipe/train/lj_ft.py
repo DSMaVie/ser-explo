@@ -77,11 +77,11 @@ class LJFTTrainingJob(Job):
         train_args = TrainingArguments(
             output_dir=self.out_path.get_path(),
             do_train=True,
-            num_train_epochs=25,
-            # gradient_checkpointing=True,
-            per_device_train_batch_size=4,
-            per_device_eval_batch_size=4,
-            gradient_accumulation_steps=8,
+            num_train_epochs=50,
+            gradient_checkpointing=True,
+            per_device_train_batch_size=2,
+            per_device_eval_batch_size=2,
+            gradient_accumulation_steps=16,
             save_steps=20,
             logging_steps=4,
             eval_steps=20,
@@ -164,11 +164,8 @@ class LJFTTrainingJob(Job):
             # trainer.save_metrics("train", metrics)
             trainer.save_state()
 
-    def resume(self):
-        train_args.resume_from_checkpoint = True
-        self.run()
 
     def tasks(self):
         if self.profile_first:
             yield Task("run_profile", rqmt=self.rqmts)
-        yield Task("run", resume="resume", rqmt=self.rqmts)
+        yield Task("run", rqmt=self.rqmts)

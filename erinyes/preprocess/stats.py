@@ -6,7 +6,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# from erinyes.inference.metrics import Metric
+from erinyes.inference.metrics import Metric
+
+
 from erinyes.util.enums import Split
 
 logger = logging.getLogger(__name__)
@@ -16,12 +18,12 @@ class DataAnalyzer:
     def __init__(
         self,
         data_src: Path,
-        label_col:str,
-        # metrics: dict[str, Metric],
+        label_col: str,
+        metrics: list[Metric],
     ):
         self.data_src = data_src
         self.label_col = label_col
-        # self.metrics = metrics
+        self.metrics = metrics
 
     def load_data(self):
         self.data = pd.read_csv(self.data_src / "manifest.csv", index_col=None)
@@ -43,7 +45,7 @@ class DataAnalyzer:
                 "total duration": dur.sum() / 60 / 60,
                 "avg duration per utterance": dur.mean(),
                 "max duration per utterance": dur.max(),
-                "min duration per utterance": dur.min()
+                "min duration per utterance": dur.min(),
             }
         )
 
@@ -52,7 +54,7 @@ class DataAnalyzer:
 
         text_keyword = "transcript" if "transcript" in data.columns else "Statement"
 
-        word_lists= data[text_keyword].str.split(" ").dropna()
+        word_lists = data[text_keyword].str.split(" ").dropna()
         word_count = word_lists.apply(len)
 
         return pd.Series(
@@ -115,30 +117,34 @@ class DataAnalyzer:
 
         return pd.DataFrame(stats)
 
-    # def compute_prior_metrics(self, priors: pd.Series):
-    #     split_wise_results = {}
+    def compute_prior_metrics(self, priors: pd.DataFrame):
+        split_wise_results = {}
+        priors = priors.set_index(priors.index.str.removeprefix("prior_"))
 
-    #     for split in Split:
-    #         priors = priors[split.name.lower()]
-    #         max_prior_emotions = [
-    #             emo for emo in priors.index if priors.loc[emo] == priors.max()
-    #         ]
-    #         priors.index.str.removeprefix("prior_")
+        for split in priors.columns:
+            current_priors = priors[split].to_dict()
+            results = {}
 
-    #         results = {}
-    #         trues = self.data.query(f"split == {split.name.lower()!r}")[
-    #             self.pp_instructions.label_target
-    #         ].to_numpy()
+            if split != "total":
+                trues = self.data.query(f"split == {split!r}")[
+                    self.label_col
+                ]
+            else:
+                trues = self.data[self.label_col]
 
-    #         preds = np.random.choice(
-    #             max_prior_emotions, len(trues)
-    #         )  # produce random choice across max prios
+            trues = trues.apply(
+                lambda s: list(current_priors.keys()).index(s)
+            ).to_numpy()
 
-    #         for mname, metric in self.metrics.items():
-    #             logger.info(f"computing metric: {metric}")
-    #             metric.track(preds, trues)
-    #             results.update({mname: metric.calc()})
-    #             metric.reset()
-    #         split_wise_results.update({split.name.lower(): results})
+            preds = np.random.choice(
+                range(len(current_priors)), len(trues), p=list(current_priors.values())
+            )  # produce random choice prediction according to priors
 
-    #     return split_wise_results
+            for metric in self.metrics:
+                logger.info(f"computing metric: {metric}")
+                metric.track(preds, trues)
+                results.update(metric.calc())
+                metric.reset()
+            split_wise_results.update({split: results})
+
+        return pd.DataFrame(split_wise_results)

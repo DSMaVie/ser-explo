@@ -17,6 +17,7 @@ from recipe.train.lj_fe import LJFETrainingJob
 from recipe.train.lj_ft import LJFTTrainingJob
 
 from sisyphus import tk
+from recipe.train_analysis import TrainAnalysisJob
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,11 @@ def run_lj_ft_baseline(base_model: str):
             rqmts={"cpu": 4, "mem": 36, "gpu": 1, "time": 72},
             profile_first=False,
         )
-        # tk.register_output(f"/{pp_job.processor.name}/{train_desc}", train_job.out_path)
+
+        train_ana_job = TrainAnalysisJob(train_job.out_path, train_job.model_class)
+        tk.register_output(
+            f"{pp_job.processor.name}/lj_ft/train_analysis", train_ana_job.out
+        )
 
         infer_job = ClfInferenceJob(
             path_to_model_ckpts=train_job.out_path,
@@ -80,11 +85,11 @@ def run_lj_fe_baseline(base_model: str):
 
     pp_jobs = [
         partial(
-            RavdessW2VPreproJobWithModelFeatures, rqmts={"cpu": 2, "mem": 10, "time": 4}
+            RavdessW2VPreproJobWithModelFeatures, rqmts={"cpu": 2, "mem": 16, "time": 8}
         ),
         partial(
             IEM4ProcessorForWav2Vec2WithModelFeatures,
-            rqmts={"cpu": 2, "mem": 10, "time": 4},
+            rqmts={"cpu": 2, "mem": 16, "time": 12},
         ),
     ]
 
@@ -108,7 +113,11 @@ def run_lj_fe_baseline(base_model: str):
             rqmts={"cpu": 4, "mem": 20, "gpu": 1, "time": 8},
             profile_first=False,
         )
-        # tk.register_output(f"/{pp_job.processor.name}/{train_desc}", train_job.out_path)
+
+        train_ana_job = TrainAnalysisJob(train_job.out_path, train_job.model_class)
+        tk.register_output(
+            f"{pp_job.processor.name}/lj_fe/train_analysis", train_ana_job.out
+        )
 
         infer_job = ClfInferenceJob(
             path_to_model_ckpts=train_job.out_path,

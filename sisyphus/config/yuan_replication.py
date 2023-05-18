@@ -29,7 +29,7 @@ def run_yuan():
         tk.register_output(f"pp/{data_job.processor.name}/data", data_job.out_path)
 
 
-        pp_job = data_pp_job()
+        pp_job = data_pp_job(path_to_tokenizer=model_dl_job.out)
         logger.info(
             f"Loading PPJob for data condition {pp_job.processor.name}. Starting Preprocessing for it."
         )

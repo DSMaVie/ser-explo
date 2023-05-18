@@ -63,16 +63,11 @@ class HFSeq2SeqTrainingJob(Job):
 
     def prepare_training(self):
         label_encodec = torch.load(Path(self.data_path.get()) / "label_encodec.pt")
-        self.met_track = InTrainingsMetricsTracker(
-            [EmotionErrorRate(), BalancedEmotionErrorRate(label_encodec.classes)]
-        )
+        # self.met_track = InTrainingsMetricsTracker(
+        #     [EmotionErrorRate(), BalancedEmotionErrorRate(label_encodec.classes)]
+        # )
 
-        model_args = {
-            "freeze_encoder": self.use_features,
-            "use_conv_features": self.use_features,
-            "clf_hidden_dim": 512 if self.use_features else 1024,
-            "clf_out_dim": label_encodec.class_dim,
-        }
+        model_args = {}
         self.model_args.set(model_args)
 
         model_class = Wav2Vec2ForCTC
@@ -88,12 +83,20 @@ class HFSeq2SeqTrainingJob(Job):
             src_path=self.data_path.get_path() + "/processed_data.h5",
             split=Split.TRAIN,
         )
+        eval_data = Hdf5Dataset(
+            src_path=self.data_path.get_path() + "/processed_data.h5",
+            split=Split.VAL,
+        )
 
         trainer = Seq2SeqTrainer(
             model=model,
             args=self.train_args,
             train_dataset=train_data,
-            data_collator=partial(pad_collate, return_dicts=True, pad_both=True),
+            eval_dataset=eval_data,
+            # compute_metrics=self.met_track,
+            data_collator=partial(
+                pad_collate, return_attention_mask=True, labels_are_seqs=True
+            ),
         )
 
         last_checkpoint = None
