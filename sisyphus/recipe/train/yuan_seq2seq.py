@@ -10,6 +10,7 @@ from transformers.trainer_utils import get_last_checkpoint
 from erinyes.data.hdf_dataset import Hdf5Dataset
 from erinyes.data.loader import pad_collate
 from erinyes.inference.metrics import BalancedEmotionErrorRate, EmotionErrorRate
+
 # from erinyes.inference.metrics_tracker import InTrainingsMetricsTracker
 from erinyes.util.enums import Split
 from sisyphus import Job, Task
@@ -76,6 +77,8 @@ class HFSeq2SeqTrainingJob(Job):
             eval_steps=20,
             weight_decay=0.005,
             warmup_steps=50,
+            load_best_model_at_end=True,
+            metric_for_best_model="eval_loss",
         )
 
         data_path = gs.file_caching(self.data_path.join_right("processed_data.h5"))
@@ -144,7 +147,7 @@ class HFSeq2SeqTrainingJob(Job):
             trainer.save_state()
 
     def resume(self):
-        train_args.resume_from_checkpoint = True
+        self.train_args.resume_from_checkpoint = True
         self.run()
 
     def tasks(self):

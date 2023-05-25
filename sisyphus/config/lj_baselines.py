@@ -2,7 +2,7 @@ import logging
 from functools import partial
 
 from recipe.data_analysis import DataAnalysisJob
-from recipe.decide import ArgMaxDecision
+from recipe.decide.utterance_level import ArgMaxDecision
 from recipe.download_pt_model import DownloadPretrainedModelJob
 from recipe.infer import ClfInferenceJob
 from recipe.preprocessing.ie4_w2v_clf import (
@@ -15,9 +15,9 @@ from recipe.preprocessing.rav_w2v_clf import (
 )
 from recipe.train.lj_fe import LJFETrainingJob
 from recipe.train.lj_ft import LJFTTrainingJob
+from recipe.train_analysis import TrainAnalysisJob
 
 from sisyphus import tk
-from recipe.train_analysis import TrainAnalysisJob
 
 logger = logging.getLogger(__name__)
 

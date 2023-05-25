@@ -44,7 +44,7 @@ class TrainAnalysisJob(Job):
 
         return pd.DataFrame.from_records(data=raw_state["log_history"]), meta_data
 
-    def produce_loss_plot(self, data: pd.DataFrame, meta_data:dict):
+    def produce_loss_plot(self, data: pd.DataFrame, meta_data: dict):
         validation_data = data.filter(["epoch", "eval_loss"]).dropna()
         validation_data["kind"] = "Validation"
         validation_data = validation_data.rename(columns={"eval_loss": "loss"})
@@ -66,11 +66,16 @@ class TrainAnalysisJob(Job):
                 ax=ax,
                 estimator=None,
             )
-            ax.set_title(f"{meta_data['data_condition']} | {meta_data['base_model']}")
+            title = (
+                f"{meta_data['data_condition']} | {meta_data['base_model']}"
+                if "base_model" in meta_data
+                else meta_data["data_condition"]
+            )
+            ax.set_title(title)
 
         serialize_plot(plotter, Path(self.out) / "loss")
 
-    def produce_lr_plot(self, data: pd.DataFrame, meta_data:dict):
+    def produce_lr_plot(self, data: pd.DataFrame, meta_data: dict):
         data = data.filter(["epoch", "learning_rate"]).dropna()
 
         def plotter(ax):

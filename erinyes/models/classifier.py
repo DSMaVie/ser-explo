@@ -22,9 +22,9 @@ class HFPooledSeqClassifier(Wav2Vec2Model):
     # subclass is hacky but works. maybe long init time
     def __init__(self, config: Wav2Vec2Config, clf_out_dim: int) -> None:
         super().__init__(config)
-
+        # breakpoint()
         self.classifier = nn.Sequential(
-            nn.Linear(out_features=config.hidden_size, in_features=config.hidden_size),
+            nn.Linear(out_features=config.hidden_size, in_features=config.conv_dim[-1]),
             nn.Tanh(),
             nn.Linear(out_features=clf_out_dim, in_features=config.hidden_size),
         )
@@ -34,6 +34,7 @@ class HFPooledSeqClassifier(Wav2Vec2Model):
         #     f"received input_values of value {input_values} and shape {input_values.shape}"
         # )
         # raise NotImplementedError
+        # breakpoint()
         logits = self.classifier(input_values)
 
         loss = None

@@ -48,7 +48,6 @@ class LJFTTrainingJob(Job):
         self.model_args = self.output_var("model_args.pkl", pickle=True)
         self.model_class = self.output_var("model_class.pkl", pickle=True)
 
-
     def prepare_training(self):
         label_encodec = torch.load(Path(self.data_path.get()) / "label_encodec.pt")
         self.met_track = InTrainingsMetricsTracker(
@@ -92,6 +91,8 @@ class LJFTTrainingJob(Job):
             dataloader_num_workers=self.rqmts.get("cpu", 0),
             report_to="tensorboard",
             overwrite_output_dir=True,
+            load_best_model_at_end=True,
+            metric_for_best_model="eval_loss",
         )
         model = self.prepare_training()
         data_path = gs.file_caching(self.data_path.join_right("processed_data.h5"))
@@ -126,10 +127,7 @@ class LJFTTrainingJob(Job):
             and not train_args.overwrite_output_dir
         ):
             last_checkpoint = get_last_checkpoint(train_args.output_dir)
-            if (
-                last_checkpoint is None
-                and len(os.listdir(train_args.output_dir)) > 0
-            ):
+            if last_checkpoint is None and len(os.listdir(train_args.output_dir)) > 0:
                 raise ValueError(
                     f"Output directory ({train_args.output_dir}) already exists and is not empty. "
                     "Use --overwrite_output_dir to overcome."
@@ -163,7 +161,6 @@ class LJFTTrainingJob(Job):
             # trainer.log_metrics("train", metrics)
             # trainer.save_metrics("train", metrics)
             trainer.save_state()
-
 
     def tasks(self):
         if self.profile_first:

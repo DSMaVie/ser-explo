@@ -28,6 +28,7 @@ def pad_collate(
         return_dict["attention_mask"] = ~(seqs == padding_token_id)
 
     if labels_are_seqs:
+        labels = [label.squeeze() for label in labels]
         return_dict["labels"] = pad_sequence(
             labels, batch_first=True, padding_value=-100
         )  # padding value of -100 is unique for hf ctc models. it wont be used for loss calc
