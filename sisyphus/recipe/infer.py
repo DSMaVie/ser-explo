@@ -1,23 +1,15 @@
 import logging
 import os
-import pdb
-import sys
-import traceback
-from ast import Str
 from pathlib import Path
 
 import torch
 from tqdm import tqdm
 
 from erinyes.data.hdf_dataset import Hdf5Dataset
-from erinyes.models.wav2vec_base import HFWav2Vec2withClf
 from erinyes.util.enums import Split
 from sisyphus import Job, Task
 from sisyphus import global_settings as gs
 from sisyphus import tk
-
-# from transformers import AutoModel
-
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +60,9 @@ class ClfInferenceJob(Job):
 
                 data = Hdf5Dataset(src_path=data_path, split=split)
                 logger.info(f"data loaded for split {split}")
-                for idx in tqdm(data.available_indices, desc=f"Infering on Split {split}"):
-
+                for idx in tqdm(
+                    data.available_indices, desc=f"Infering on Split {split}"
+                ):
                     x, y = data[idx]
                     x = x.unsqueeze(dim=0)
                     x = x[:, : 20 * 16000].to(self._train_device)
@@ -98,7 +91,7 @@ class Seq2SeqInferenceJob(Job):
         model_class: tk.Variable,
     ):
         self.model_path = Path(path_to_model_ckpts)
-        self.data_path = Path(path_to_data)
+        self.data_path = path_to_data
         self.rqmts = rqmts
         self._train_device = "cuda" if self.rqmts.get("gpu", False) else "cpu"
 
@@ -110,7 +103,7 @@ class Seq2SeqInferenceJob(Job):
 
     def run(self):
         # select_classes
-        le = torch.load(self.data_path / "label_encodec.pt")
+        le = torch.load(Path(self.data_path) / "label_encodec.pt")
         self.class_labels.set(le.classes)
 
         data_path = gs.file_caching(self.data_path.join_right("processed_data.h5"))
@@ -132,19 +125,15 @@ class Seq2SeqInferenceJob(Job):
             data = Hdf5Dataset(src_path=data_path, split=split)
             logger.info(f"data loaded for split {split}")
             for idx in tqdm(data.available_indices, desc=f"Infering on Split {split}"):
-
                 x, y = data[idx]
                 x = x.unsqueeze(dim=0).to(self._train_device)
 
                 model_out = model(input_values=x)
                 logits_seq = model_out.logits.cpu().detach().numpy()[0]
 
-                res_string = (
-                    f"{y.numpy()[0]:n}\n"
-                )
+                res_string = "#" + ",".join(str(val) for val in y.long()[0].numpy()) + "\n"
 
                 with (split_path / f"{idx}.txt").open("w+") as file:
-
                     file.write(res_string)
                     hid_iter = (
                         ",".join(str(h_value) for h_value in logits) + "\n"

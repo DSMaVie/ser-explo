@@ -29,19 +29,19 @@ def run_yuan():
         RavdessW2VPreproJobWithPhonemes,
         IEM4ProcessorForWav2Vec2WithPhonemes,
     ]:
-        data_job = data_pp_job(model_dl_job.out)
+        # data_job = data_pp_job(model_dl_job.out)
 
-        tk.register_output(f"pp/{data_job.processor.name}/data", data_job.out_path)
+        # tk.register_output(f"pp/{data_job.processor.name}/data", data_job.out_path)
 
         pp_job = data_pp_job(path_to_tokenizer=model_dl_job.out)
         logger.info(
-            f"Loading PPJob for data condition {pp_job.processor.name}. Starting Preprocessing for it."
+            f"Loading PPJob for data condition {pp_job.processor.src.name.lower()}. Starting Preprocessing for it."
         )
 
-        logger.info(f"loading analysis_job for {pp_job.processor.name}")
+        logger.info(f"loading analysis_job for {pp_job.processor.src.name.lower()}")
         pp_ana_job = DataAnalysisJob(pp_job.out_path, pp_job.label_column)
         tk.register_report(
-            f"pp/{pp_job.processor.name}/data_stats.txt",
+            f"pp/{pp_job.processor.src.name.lower()}/data_stats.txt",
             pp_ana_job.stats,
         )
 
@@ -51,11 +51,11 @@ def run_yuan():
             rqmts={"cpu": 4, "mem": 16, "gpu": 1, "time": 24},
             profile_first=False,
         )
-        # tk.register_output(f"{pp_job.processor.name}/yuan_base", train_job.out_path)
+        # tk.register_output(f"{pp_job.processor.src.name.lower()}/yuan_base", train_job.out_path)
 
         train_ana_job = TrainAnalysisJob(train_job.out_path, train_job.model_class)
         tk.register_output(
-            f"{pp_job.processor.name}/yuan/train_analysis", train_ana_job.out
+            f"{pp_job.processor.src.name.lower()}/yuan/training", train_ana_job.out
         )
 
         infer_job = Seq2SeqInferenceJob(
@@ -69,7 +69,7 @@ def run_yuan():
         dec_job = ArgMaxSeqDecision(
             path_to_inferences=infer_job.pred_out, class_labels=infer_job.class_labels
         )
-        tk.register_output(
-            f"/{pp_job.processor.name}/yuan/decisions", dec_job.decisions
-        )
-        tk.register_report(f"/{pp_job.processor.name}/yuan/results", dec_job.result)
+        # tk.register_output(
+        #     f"{pp_job.processor.src.name.lower()}/yuan/decisions", dec_job.decisions
+        # )
+        tk.register_report(f"{pp_job.processor.src.name.lower()}/yuan/results", dec_job.result)

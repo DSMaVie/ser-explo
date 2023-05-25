@@ -86,7 +86,12 @@ class TrainAnalysisJob(Job):
                 ax=ax,
                 estimator=None,
             )
-            ax.set_title(f"{meta_data['data_condition']} | {meta_data['base_model']}")
+            title = (
+                f"{meta_data['data_condition']} | {meta_data['base_model']}"
+                if "base_model" in meta_data
+                else meta_data["data_condition"]
+            )
+            ax.set_title(title)
 
         serialize_plot(plotter, Path(self.out) / "learning_rate")
 

@@ -71,7 +71,7 @@ class LJFETrainingJob(Job):
         train_args = TrainingArguments(
             output_dir=self.out_path.get_path(),
             do_train=True,
-            num_train_epochs=50,
+            num_train_epochs=150,
             gradient_checkpointing=True,
             per_device_train_batch_size=2,
             per_device_eval_batch_size=2,

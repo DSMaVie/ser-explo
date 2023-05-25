@@ -6,13 +6,9 @@ from recipe.decide.utterance_level import ArgMaxDecision
 from recipe.download_pt_model import DownloadPretrainedModelJob
 from recipe.infer import ClfInferenceJob
 from recipe.preprocessing.ie4_w2v_clf import (
-    IEM4ProcessorForWav2Vec2,
-    IEM4ProcessorForWav2Vec2WithModelFeatures,
-)
+    IEM4ProcessorForWav2Vec2, IEM4ProcessorForWav2Vec2WithModelFeatures)
 from recipe.preprocessing.rav_w2v_clf import (
-    RavdessW2VPreproJob,
-    RavdessW2VPreproJobWithModelFeatures,
-)
+    RavdessW2VPreproJob, RavdessW2VPreproJobWithModelFeatures)
 from recipe.train.lj_fe import LJFETrainingJob
 from recipe.train.lj_ft import LJFTTrainingJob
 from recipe.train_analysis import TrainAnalysisJob
@@ -34,14 +30,14 @@ def run_lj_ft_baseline(base_model: str):
     for data_pp_job in pp_jobs:
         pp_job = data_pp_job()
         logger.info(
-            f"Loading PPJob for data condition {pp_job.processor.name}. Starting Preprocessing for it."
+            f"Loading PPJob for data condition {pp_job.processor.src.name.lower()}. Starting Preprocessing for it."
         )
-        # tk.register_output(f"pp/{pp_job.processor.name}/data", pp_job.out_path)
+        # tk.register_output(f"pp/{pp_job.processor.src.name.lower()}/data", pp_job.out_path)
 
-        logger.info(f"loading analysis_job for {pp_job.processor.name}")
+        logger.info(f"loading analysis_job for {pp_job.processor.src.name.lower()}")
         pp_ana_job = DataAnalysisJob(pp_job.out_path, pp_job.label_column)
         tk.register_report(
-            f"pp/{pp_job.processor.name}/data_stats.txt",
+            f"pp/{pp_job.processor.src.name.lower()}/data_stats.txt",
             pp_ana_job.stats,
         )
 
@@ -54,7 +50,7 @@ def run_lj_ft_baseline(base_model: str):
 
         train_ana_job = TrainAnalysisJob(train_job.out_path, train_job.model_class)
         tk.register_output(
-            f"{pp_job.processor.name}/lj_ft/train_analysis", train_ana_job.out
+            f"{pp_job.processor.src.name.lower()}/lj_ft/training", train_ana_job.out
         )
 
         infer_job = ClfInferenceJob(
@@ -68,11 +64,11 @@ def run_lj_ft_baseline(base_model: str):
         dec_job = ArgMaxDecision(
             path_to_inferences=infer_job.pred_out, class_labels=infer_job.class_labels
         )
-        tk.register_output(
-            f"{pp_job.processor.name}/lj_finetune/decisions", dec_job.decisions
-        )
+        # tk.register_output(
+        #     f"{pp_job.processor.src.name.lower()}/lj_finetune/decisions", dec_job.decisions
+        # )
         tk.register_report(
-            f"{pp_job.processor.name}/lj_finetune/results", dec_job.result
+            f"{pp_job.processor.src.name.lower()}/lj_finetune/results", dec_job.result
         )
 
 
@@ -96,14 +92,14 @@ def run_lj_fe_baseline(base_model: str):
     for data_pp_job in pp_jobs:
         pp_job = data_pp_job(path_to_tokenizer=model_dl_job.out)
         logger.info(
-            f"Loading PPJob for data condition {pp_job.processor.name}. Starting Preprocessing for it."
+            f"Loading PPJob for data condition {pp_job.processor.src.name.lower()}. Starting Preprocessing for it."
         )
-        # tk.register_output(f"pp/{pp_job.processor.name}/data", pp_job.out_path)
+        # tk.register_output(f"pp/{pp_job.processor.src.name.lower()}/data", pp_job.out_path)
 
-        logger.info(f"loading analysis_job for {pp_job.processor.name}")
+        logger.info(f"loading analysis_job for {pp_job.processor.src.name.lower()}")
         pp_ana_job = DataAnalysisJob(pp_job.out_path, pp_job.label_column)
         tk.register_report(
-            f"pp/{pp_job.processor.name}/data_stats.txt",
+            f"pp/{pp_job.processor.src.name.lower()}/data_stats.txt",
             pp_ana_job.stats,
         )
 
@@ -116,7 +112,7 @@ def run_lj_fe_baseline(base_model: str):
 
         train_ana_job = TrainAnalysisJob(train_job.out_path, train_job.model_class)
         tk.register_output(
-            f"{pp_job.processor.name}/lj_fe/train_analysis", train_ana_job.out
+            f"{pp_job.processor.src.name.lower()}/lj_featureextract/training", train_ana_job.out
         )
 
         infer_job = ClfInferenceJob(
@@ -130,7 +126,7 @@ def run_lj_fe_baseline(base_model: str):
         dec_job = ArgMaxDecision(
             path_to_inferences=infer_job.pred_out, class_labels=infer_job.class_labels
         )
-        tk.register_output(
-            f"{pp_job.processor.name}/lj_ft/decisions", dec_job.decisions
-        )
-        tk.register_report(f"{pp_job.processor.name}/lj_ft/results", dec_job.result)
+        # tk.register_output(
+        #     f"{pp_job.processor.src.name.lower()}/lj_ft/decisions", dec_job.decisions
+        # )
+        tk.register_report(f"{pp_job.processor.src.name.lower()}/lj_featureextract/results", dec_job.result)
