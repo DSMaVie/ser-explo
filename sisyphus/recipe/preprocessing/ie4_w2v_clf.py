@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+import json
 from pathlib import Path
 
 from transformers import Wav2Vec2Model, Wav2Vec2PhonemeCTCTokenizer
@@ -16,7 +17,7 @@ from erinyes.preprocess.steps import (
     TransformStartStopToDurations,
     ValFromTrainSplitter,
 )
-from erinyes.preprocess.text import NormalizeText, TokenizeText
+from erinyes.preprocess.text import NormalizeText, PhonemizeText, UpdateVocab
 from erinyes.util.enums import Dataset
 from sisyphus import tk
 
@@ -74,12 +75,13 @@ class IEM4ProcessorForWav2Vec2(PreprocessingJob):
         self.label_column.set("Emotion")
 
 
-class IEM4ProcessorForWav2Vec2WithText(PreprocessingJob):
+class IEM4ProcessorForWav2Vec2WithPhonemes(PreprocessingJob):
     def __init__(self, path_to_tokenizer: tk.Path) -> None:
         super().__init__()
 
         self.path_to_tokenizer = Path(path_to_tokenizer)
 
+        self.new_model_loc = self.output_path("model", directory=True)
         self.processor = Preprocessor(
             src=Dataset.IEM,
             name="iem4_w2v_clf_with_text",
@@ -110,7 +112,20 @@ class IEM4ProcessorForWav2Vec2WithText(PreprocessingJob):
                     args={"column": "duration", "min": 3, "max": 30},
                 ),
                 PreproRecipe("normalize_text", NormalizeText),
-                PreproRecipe("tokenize_text", TokenizeText, delayed_args=["tokenizer"]),
+                PreproRecipe(
+                    "tokenize_text",
+                    PhonemizeText,
+                    args={"tokenizer_location": Path(self.path_to_tokenizer)},
+                ),
+                PreproRecipe(
+                    "update_vocab",
+                    UpdateVocab,
+                    args={
+                        "tokenizer_location": self.path_to_tokenizer,
+                        "label_col": "Emotion",
+                        "new_model_location": Path(self.new_model_loc),
+                    },
+                ),
             ],
             feature_extractor=PreproRecipe(
                 "raw_extractor", NormalizedRawAudio, args={"resample_to": 16_000}
@@ -118,8 +133,10 @@ class IEM4ProcessorForWav2Vec2WithText(PreprocessingJob):
             label_encodec=PreproRecipe(
                 "integer_encoding",
                 SeqIntEncodec,
-                args={"classes": EMOTIONS},
-                delayed_args=["tokenizer"],
+                args={
+                    "classes": EMOTIONS,
+                    "tokenizer_location": Path(self.new_model_loc),
+                },
             ),
         )
 
@@ -127,15 +144,7 @@ class IEM4ProcessorForWav2Vec2WithText(PreprocessingJob):
         self.utterance_idx.set("file_idx")
         self.label_column.set(("Emotion", "phonemes"))
 
-        tok = Wav2Vec2PhonemeCTCTokenizer.from_pretrained(self.path_to_tokenizer)
         delayed_args = dict()
-        for step in itertools.chain(
-            self.processor.steps,
-            [self.processor.feature_extractor, self.processor.label_encodec],
-        ):
-            if step.delayed_args is not None and "tokenizer" in step.delayed_args:
-                delayed_args.update({f"{step.name}:tokenizer": tok})
-
         return delayed_args
 
 

@@ -147,7 +147,7 @@ class Preprocessor:
 
                 labels = {target: row[target] for target in label_targets}
                 enc_labels = label_encodec.encode(
-            **labels if len(labels) > 1 else {"label":list(labels.values())[0]}
+                    **labels if len(labels) > 1 else {"label": list(labels.values())[0]}
                 )
 
                 groupkeys = "/".join([row.split] + [str(row[k]) for k in identifier])

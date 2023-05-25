@@ -1,13 +1,12 @@
 import logging
 
-from sisyphus import tk
-
-from recipe.download_pt_model import \
-    DownloadPretrainedModelWithPhonemeTokenzier
-from recipe.preprocessing.ie4_w2v_clf import IEM4ProcessorForWav2Vec2WithText
-from recipe.preprocessing.rav_w2v_clf import RavdessW2VPreproJobWithText
 from recipe.data_analysis import DataAnalysisJob
+from recipe.download_pt_model import DownloadPretrainedModelWithPhonemeTokenzier
+from recipe.preprocessing.ie4_w2v_clf import IEM4ProcessorForWav2Vec2WithPhonemes
+from recipe.preprocessing.rav_w2v_clf import RavdessW2VPreproJobWithPhonemes
 from recipe.train.yuan_seq2seq import HFSeq2SeqTrainingJob
+
+from sisyphus import tk
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +22,13 @@ def run_yuan():
         rqmts={"cpu": 1, "mem": 10, "gpu": 0, "time": 1},
     )  # wav2vec2 base model and custom tok
 
-    for data_pp_job in [RavdessW2VPreproJobWithText, IEM4ProcessorForWav2Vec2WithText]:
+    for data_pp_job in [
+        RavdessW2VPreproJobWithPhonemes,
+        IEM4ProcessorForWav2Vec2WithPhonemes,
+    ]:
         data_job = data_pp_job(model_dl_job.out)
 
         tk.register_output(f"pp/{data_job.processor.name}/data", data_job.out_path)
-
 
         pp_job = data_pp_job(path_to_tokenizer=model_dl_job.out)
         logger.info(
@@ -43,7 +44,7 @@ def run_yuan():
 
         train_job = HFSeq2SeqTrainingJob(
             data_path=pp_job.out_path,
-            pretrained_model_path=model_dl_job.out,
+            pretrained_model_path=pp_job.new_model_loc,
             rqmts={"cpu": 4, "mem": 16, "gpu": 1, "time": 24},
             profile_first=False,
         )

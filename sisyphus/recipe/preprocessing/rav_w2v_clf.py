@@ -14,7 +14,7 @@ from erinyes.preprocess.steps import (
     GatherDurations,
     LabelNormalizer,
 )
-from erinyes.preprocess.text import NormalizeText, TokenizeText
+from erinyes.preprocess.text import NormalizeText, PhonemizeText, UpdateVocab
 from erinyes.util.enums import Dataset
 from sisyphus import tk
 
@@ -67,11 +67,12 @@ class RavdessW2VPreproJob(PreprocessingJob):
         self.label_column.set("Emotion")
 
 
-class RavdessW2VPreproJobWithText(PreprocessingJob):
+class RavdessW2VPreproJobWithPhonemes(PreprocessingJob):
     def __init__(self, path_to_tokenizer: tk.Path) -> None:
         super().__init__()
 
         self.path_to_tokenizer = Path(path_to_tokenizer)
+        self.new_model_loc = self.output_path("model", directory=True)
 
         self.processor = Preprocessor(
             src=Dataset.RAV,
@@ -100,7 +101,18 @@ class RavdessW2VPreproJobWithText(PreprocessingJob):
                     args={"pth": "rav", "filetype": "wav"},
                 ),
                 PreproRecipe("normalize_text", NormalizeText),
-                PreproRecipe("tokenize_text", TokenizeText, delayed_args=["tokenizer"]),
+                PreproRecipe(
+                    "tokenize_text", PhonemizeText, delayed_args=["tokenizer"]
+                ),
+                PreproRecipe(
+                    "update_vocab",
+                    UpdateVocab,
+                    args={
+                        "tokenizer_location": self.path_to_tokenizer,
+                        "label_col": "Emotion",
+                        "new_model_location": Path(self.new_model_loc),
+                    },
+                ),
             ],
             feature_extractor=PreproRecipe(
                 "raw_extractor", NormalizedRawAudio, args={"resample_to": 16_000}
@@ -117,7 +129,9 @@ class RavdessW2VPreproJobWithText(PreprocessingJob):
         self.utterance_idx.set("file_idx")
         self.label_column.set(("Emotion", "phonemes"))
 
-        tok = Wav2Vec2PhonemeCTCTokenizer.from_pretrained(self.path_to_tokenizer)
+        tok = Wav2Vec2PhonemeCTCTokenizer.from_pretrained(
+            self.new_model_loc,
+        )
         delayed_args = dict()
         for step in itertools.chain(
             self.processor.steps,

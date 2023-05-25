@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod, abstractproperty
+from pathlib import Path
 from typing import Generic, TypeVar
 
 import transformers
@@ -53,12 +54,12 @@ class IntEncodec(LabelEncodec[str, int]):
 
 
 class SeqIntEncodec(LabelEncodec["list[str, str]", list]):
-    def __init__(
-        self, tokenizer: transformers.Wav2Vec2PhonemeCTCTokenizer, classes: list[str]
-    ) -> None:
+    def __init__(self, tokenizer_location: Path, classes: list[str]) -> None:
         super().__init__()
 
-        self.tokenizer = tokenizer
+        self.tokenizer = transformers.Wav2Vec2PhonemeCTCTokenizer.from_pretrained(
+            tokenizer_location
+        )
         self.classes = classes
 
         self.special_tokens = self.tokenizer.all_special_tokens
@@ -67,15 +68,18 @@ class SeqIntEncodec(LabelEncodec["list[str, str]", list]):
     def encode(self, phonemes: str, Emotion: str) -> list[int]:
         emo_index = self.classes.index(Emotion)
 
-        phoneme_ids = (
+        phoneme_ids = [
             self.tokenizer._convert_token_to_id(tok) for tok in phonemes.split(" ")
-        )
+        ]
+
         emo_enriched_phoneme_ids = [
-            tok_id * (emo_index + 1)  # case emotionally relevant
+            (emo_index + 1) * (tok_id - len(self.special_tokens))
+            + len(self.special_tokens)  # case emotionally relevant
             if (tok_id not in self.special_token_ids)  # check case
             else tok_id  # case not emotionally relevant aka special token
             for tok_id in phoneme_ids
         ]
+
         return emo_enriched_phoneme_ids
 
     def decode(self, label: list[int]) -> list[tuple[str, str]]:

@@ -1,13 +1,12 @@
 import json
 import re
+import shutil
 import string
-from collections import Counter
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from transformers.tokenization_utils import PreTrainedTokenizer
+from transformers import AutoConfig, Wav2Vec2PhonemeCTCTokenizer
 
 
 class NormalizeText:
@@ -32,10 +31,10 @@ class NormalizeText:
         return data
 
 
-class TokenizeText:
-    def __init__(self, tokenizer: PreTrainedTokenizer) -> None:
+class PhonemizeText:
+    def __init__(self, tokenizer_location: Path) -> None:
         super().__init__()
-        self.tokenizer = tokenizer
+        self.tokenizer = Wav2Vec2PhonemeCTCTokenizer.from_pretrained(tokenizer_location)
 
     def run(self, data: pd.DataFrame) -> pd.DataFrame:
         tqdm.pandas(desc="phonemize")
@@ -47,24 +46,64 @@ class TokenizeText:
         )
         data["phonemes"] = data["phonemes"].progress_apply(
             lambda s: f"<s> {s[:-1]}</s>"
-        ) # add beginning and end tokens
+        )  # add beginning and end tokens
         return data
 
 
 class UpdateVocab:
-    def __init__(self, tokenizer: PreTrainedTokenizer, tokenizer_location:Path) -> None:
+    def __init__(
+        self,
+        # tokenizer: PreTrainedTokenizer,
+        tokenizer_location: Path,
+        new_model_location: Path,
+        label_col: str,
+    ) -> None:
         super().__init__()
-        self.tokenizer = tokenizer
+        # self.tokenizer = toke#nizer
         self.tokenizer_location = tokenizer_location
+        self.new_model_location = new_model_location
+        self.label_col = label_col
 
     def run(self, data: pd.DataFrame) -> pd.DataFrame:
-        all_tokens = np.fromiter(
-            (item for sublist in data.phonemes.values for item in sublist), str
+        tokenizer = Wav2Vec2PhonemeCTCTokenizer.from_pretrained(self.tokenizer_location)
+        tokenizer._additional_special_tokens = ["|"]
+        tokenizer.save_pretrained(self.new_model_location)
+
+        unique_tokens = set(" ".join(data.phonemes.values).split(" ")).union(
+            set(tokenizer.all_special_tokens)
         )
-        counter = Counter(all_tokens)
+        unique_tokens = sorted(
+            unique_tokens, key=lambda s: s in tokenizer.all_special_tokens, reverse=True
+        )
+        new_vocab = {token: number for number, token in enumerate(unique_tokens)}
+        n_emo = len(data[self.label_col].unique())
 
-        unique_tokens = set(counter.keys()).union(self.tokenizer.all_special_tokens)
-        new_vocab = {token: number for number,token in enumerate(unique_tokens)}
+        for file in self.tokenizer_location.iterdir():
+            if file.name == "vocab.json":
+                with (self.new_model_location / file.name).open(
+                    "w", encoding="utf-8"
+                ) as f:
+                    json.dump(new_vocab, f, indent=2)
 
-        with (self.tokenizer_location / "vocab.json").open("w") as file:
-            json.dump(new_vocab, file, indent=2)
+            elif file.name == "tokenizer_config.json":
+                with file.open("r") as f:
+                    conf = json.load(f)
+                    conf[
+                        "special_tokens_map_file"
+                    ] = "../facebook_wav2vec2-base-960h/special_tokens_map.json"
+                    with (self.new_model_location / file.name).open("w") as f_out:
+                        json.dump(conf, f_out)
+
+            elif file.name == "config.json":
+                conf = AutoConfig.from_pretrained(file)
+                conf.vocab_size = (len(new_vocab) - len(tokenizer.all_special_tokens)) * n_emo + len(tokenizer.all_special_tokens)
+                # breakpoint()
+                conf.save_pretrained(self.new_model_location)
+
+            elif file.name == "special_tokens_map.json":
+                continue
+                #skip bc already serialized
+
+            else:
+                shutil.copy(file, self.new_model_location)
+        return data
