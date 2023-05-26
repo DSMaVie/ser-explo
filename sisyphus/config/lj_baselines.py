@@ -50,7 +50,7 @@ def run_lj_ft_baseline(base_model: str):
 
         train_ana_job = TrainAnalysisJob(train_job.out_path, train_job.model_class)
         tk.register_output(
-            f"{pp_job.processor.src.name.lower()}/lj_ft/training", train_ana_job.out
+            f"{pp_job.processor.src.name.lower()}/lj_finetune/training", train_ana_job.out
         )
 
         infer_job = ClfInferenceJob(
@@ -67,7 +67,7 @@ def run_lj_ft_baseline(base_model: str):
         # tk.register_output(
         #     f"{pp_job.processor.src.name.lower()}/lj_finetune/decisions", dec_job.decisions
         # )
-        tk.register_report(
+        tk.register_output(
             f"{pp_job.processor.src.name.lower()}/lj_finetune/results", dec_job.result
         )
 
@@ -129,4 +129,4 @@ def run_lj_fe_baseline(base_model: str):
         # tk.register_output(
         #     f"{pp_job.processor.src.name.lower()}/lj_ft/decisions", dec_job.decisions
         # )
-        tk.register_report(f"{pp_job.processor.src.name.lower()}/lj_featureextract/results", dec_job.result)
+        tk.register_output(f"{pp_job.processor.src.name.lower()}/lj_featureextract/results", dec_job.result)

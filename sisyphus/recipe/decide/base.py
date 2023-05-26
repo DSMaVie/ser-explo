@@ -20,7 +20,7 @@ class UtteranceLevelDecisionJob(Job):
         self.decisions = self.output_path("decisions", directory=True)
         self.classes = class_labels.get()
 
-        self.result = self.output_var("results.txt")
+        self.result = self.output_path("results", directory=True)
 
     def run(self):
         dec_list = []
@@ -61,19 +61,20 @@ class UtteranceLevelDecisionJob(Job):
             dec = dec_frame.query(f"split == {split.name.lower()!r}")
 
             metric.track(dec.pred.values, dec.true.values)
-            results.append(
-                {
-                    "split": split.name.lower(),
-                    "metric": metric.__class__.__name__,
-                    "value": metric.calc(),
-                }
-            )
+            for metric_name, res in metric.calc().items():
+                results.append(
+                    {
+                        "split": split.name.lower(),
+                        "metric": metric_name,
+                        "value": res,
+                    }
+                )
             metric.reset()
 
-        results = pd.DataFrame(results)
-        results = results.pivot(index="metric", columns="split", values="value")
+        results = pd.DataFrame.from_records(results)
+        # results = results.pivot(index="metric", columns="split", values="value")
         logger.info(f"got results {results.to_string()}")
-        self.result.set(results.to_string())
+        results.to_csv(Path(self.result) / "metrics.csv", index=None)
 
     def tasks(self):
         yield Task("run")
@@ -88,7 +89,7 @@ class SequenceLevelDecisionJob(Job):
         self.decisions = self.output_path("decisions", directory=True)
         self.classes = class_labels.get()
 
-        self.result = self.output_var("results.txt")
+        self.result = self.output_path("results", directory=True)
 
     def run(self):
         raise NotImplementedError

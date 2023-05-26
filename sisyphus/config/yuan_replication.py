@@ -72,4 +72,4 @@ def run_yuan():
         # tk.register_output(
         #     f"{pp_job.processor.src.name.lower()}/yuan/decisions", dec_job.decisions
         # )
-        tk.register_report(f"{pp_job.processor.src.name.lower()}/yuan/results", dec_job.result)
+        tk.register_output(f"{pp_job.processor.src.name.lower()}/yuan/results", dec_job.result)
