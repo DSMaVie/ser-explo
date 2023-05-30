@@ -40,6 +40,7 @@ class EmotionErrorRate(Metric):
         assert (
             self.true.shape == self.pred.shape
         ), f"EmotionErrorRate requires same shapes: {self.pred.shape} (pred) != {self.true.shape} (true)"
+        # breakpoint()
 
         errors = np.sum(np.not_equal(self.true, self.pred))
         totals = np.sum(self.true.shape)
@@ -57,15 +58,16 @@ class BalancedEmotionErrorRate(Metric):
         assert (
             self.true.shape == self.pred.shape
         ), f"EmotionErrorRate requires same shapes: {self.pred.shape} (pred) != {self.true.shape} (true)"
-
+        # breakpoint()
         beers = {}
         for idx, val in enumerate(self.classes):
             emo_mask = self.true == idx
             trues = self.true[emo_mask]
             preds = self.pred[emo_mask]
 
+            # breakpoint()
             errors = np.sum(np.not_equal(trues, preds))
-            totals = np.sum(emo_mask.shape)
+            totals = np.sum(trues.shape)
             beers.update({f"beer_{val}": errors / totals})
 
         total = {"beer_total": np.mean(list(beers.values()))}

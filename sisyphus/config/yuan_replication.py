@@ -1,5 +1,6 @@
 import logging
 
+from importlib_resources import path
 from recipe.data_analysis import DataAnalysisJob
 from recipe.decide.sequence_level import ArgMaxSeqDecision
 from recipe.download_pt_model import DownloadPretrainedModelWithPhonemeTokenzier
@@ -67,9 +68,11 @@ def run_yuan():
         )
 
         dec_job = ArgMaxSeqDecision(
-            path_to_inferences=infer_job.pred_out, class_labels=infer_job.class_labels
+            path_to_inferences=infer_job.pred_out, path_to_label_encodec=pp_job.out
         )
         # tk.register_output(
         #     f"{pp_job.processor.src.name.lower()}/yuan/decisions", dec_job.decisions
         # )
-        tk.register_output(f"{pp_job.processor.src.name.lower()}/yuan/results", dec_job.result)
+        tk.register_output(
+            f"{pp_job.processor.src.name.lower()}/yuan/results", dec_job.result
+        )

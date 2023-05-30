@@ -4,7 +4,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from erinyes.inference.metrics import BalancedEmotionErrorRate, EmotionErrorRate
+from erinyes.inference.metrics import (BalancedEmotionErrorRate,
+                                       EmotionErrorRate)
 from erinyes.util.enums import Split
 from sisyphus import Job, Task, tk
 
@@ -43,10 +44,11 @@ class UtteranceLevelDecisionJob(Job):
                 pred = self.decide(logits)
 
                 dec_list.append(
-                    {"idx": idx, "true": true, "pred": pred, "split": split}
+                    {"idx": idx, "true": int(true), "pred": pred, "split": split}
                 )
 
         dec_frame = pd.DataFrame.from_records(dec_list)
+
         logger.info(f"got decisisons {dec_frame.head().to_string()}")
 
         metrics = [
@@ -61,6 +63,7 @@ class UtteranceLevelDecisionJob(Job):
             dec = dec_frame.query(f"split == {split.name.lower()!r}")
 
             metric.track(dec.pred.values, dec.true.values)
+
             for metric_name, res in metric.calc().items():
                 results.append(
                     {
@@ -81,18 +84,18 @@ class UtteranceLevelDecisionJob(Job):
 
 
 class SequenceLevelDecisionJob(Job):
-    def __init__(self, path_to_inferences: tk.Path, class_labels: tk.Variable) -> None:
+    def __init__(self, path_to_inferences: tk.Path, path_to_label_encodec: tk.Path) -> None:
         super().__init__()
 
         self.path_to_inferences = Path(path_to_inferences)
+        self.encodec_path = Path(path_to_label_encodec)
 
         self.decisions = self.output_path("decisions", directory=True)
-        self.classes = class_labels.get()
-
         self.result = self.output_path("results", directory=True)
 
     def run(self):
-        raise NotImplementedError
+        self.pre_run()
+
         dec_list = []
         for path in self.path_to_inferences.rglob("*.txt"):
             idx_split = path.parts.index("inferences") + 1
@@ -105,43 +108,54 @@ class SequenceLevelDecisionJob(Job):
 
             # read and compute results
             with path.open("r") as file:
+                breakpoint()
                 line = file.readline()
-                logger.info(f"found data {line} at {file.name}")
-                true, logits = line.split(";")
+                logger.info(f"found labels {line} at {file.name}")
+                labels = [int(true) for true in line[1:-1].split(",")]
 
-                logits = logits.split(",")
-                pred = self.decide(logits)
+                for line_idx, line in enumerate(file.readlines()):
+                    logits = [float(lit) for lit in line[:-1].split(",")]
 
-                dec_list.append(
-                    {"idx": idx, "true": true, "pred": pred, "split": split}
-                )
+                    pred, true = self.decide(logits, labels)
+
+                    dec_list.append(
+                        {
+                            "idx": idx,
+                            "true": true,
+                            "pred": pred,
+                            "split": split,
+                            "position": line_idx,
+                        }
+                    )
 
         dec_frame = pd.DataFrame.from_records(dec_list)
         logger.info(f"got decisisons {dec_frame.head().to_string()}")
 
-        metrics = [
-            EmotionErrorRate(),
-            BalancedEmotionErrorRate(classes=self.classes, return_per_emotion=True),
-        ]
+        # metrics = [
+        #     EmotionErrorRate(),
+        #     BalancedEmotionErrorRate(classes=self.classes, return_per_emotion=True),
+        # ]
         dec_frame.to_csv(Path(self.decisions) / "decisions.csv")
 
         # compute_metrics
         results = []
-        for metric, split in itertools.product(metrics, Split):
+        for split in Split:
             dec = dec_frame.query(f"split == {split.name.lower()!r}")
 
-            metric.track(dec.pred.values, dec.true.values)
-            results.append(
-                {
-                    "split": split.name.lower(),
-                    "metric": metric.__class__.__name__,
-                    "value": metric.calc(),
-                }
-            )
-            metric.reset()
+            result = self.calculate_metrics(dec)
+            # metric.track(dec.pred.values, dec.true.values)
+            # results.append(
+            #     {
+            #         "split": split.name.lower(),
+            #         "metric": metric.__class__.__name__,
+            #         "value": metric.calc(),
+            #     }
+            # )
+            # metric.reset()
+            result = [res.update({"split": split.name.lower()}) for res in result]
+            results.extend(result)
 
         results = pd.DataFrame(results)
-        results = results.pivot(index="metric", columns="split", values="value")
         logger.info(f"got results {results.to_string()}")
         self.result.set(results.to_string())
 
