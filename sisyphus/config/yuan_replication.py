@@ -68,7 +68,7 @@ def run_yuan():
         )
 
         dec_job = ArgMaxSeqDecision(
-            path_to_inferences=infer_job.pred_out, path_to_label_encodec=pp_job.out
+            path_to_inferences=infer_job.pred_out, path_to_label_encodec=pp_job.out_path
         )
         # tk.register_output(
         #     f"{pp_job.processor.src.name.lower()}/yuan/decisions", dec_job.decisions

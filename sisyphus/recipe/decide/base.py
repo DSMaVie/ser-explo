@@ -84,7 +84,9 @@ class UtteranceLevelDecisionJob(Job):
 
 
 class SequenceLevelDecisionJob(Job):
-    def __init__(self, path_to_inferences: tk.Path, path_to_label_encodec: tk.Path) -> None:
+    def __init__(
+        self, path_to_inferences: tk.Path, path_to_label_encodec: tk.Path
+    ) -> None:
         super().__init__()
 
         self.path_to_inferences = Path(path_to_inferences)
@@ -108,33 +110,46 @@ class SequenceLevelDecisionJob(Job):
 
             # read and compute results
             with path.open("r") as file:
-                breakpoint()
+                # breakpoint()
                 line = file.readline()
                 logger.info(f"found labels {line} at {file.name}")
                 labels = [int(true) for true in line[1:-1].split(",")]
 
-                for line_idx, line in enumerate(file.readlines()):
-                    logits = [float(lit) for lit in line[:-1].split(",")]
+                logits = []
+                for line in file.readlines():
+                    line_logits = [float(lit) for lit in line[:-1].split(",")]
+                    logits.append(line_logits)
 
-                    pred, true = self.decide(logits, labels)
-
+                pred, true = self.decode(logits, labels)
+                for line_idx, (phoneme, emotion) in enumerate(true):
                     dec_list.append(
                         {
                             "idx": idx,
-                            "true": true,
-                            "pred": pred,
+                            "type": "true",
+                            "phoneme": phoneme,
+                            "emotion": emotion,
                             "split": split,
                             "position": line_idx,
                         }
                     )
 
-        dec_frame = pd.DataFrame.from_records(dec_list)
-        logger.info(f"got decisisons {dec_frame.head().to_string()}")
+                for line_idx, (phoneme, emotion) in enumerate(pred):
+                    dec_list.append(
+                        {
+                            "idx": idx,
+                            "type": "pred",
+                            "phoneme": phoneme,
+                            "emotion": emotion,
+                            "split": split,
+                            "position": line_idx,
+                        }
+                    )
 
-        # metrics = [
-        #     EmotionErrorRate(),
-        #     BalancedEmotionErrorRate(classes=self.classes, return_per_emotion=True),
-        # ]
+
+        dec_frame = pd.DataFrame.from_records(dec_list)
+        dec_frame = self.decide(dec_frame)
+
+        logger.info(f"got decisisons {dec_frame.head().to_string()}")
         dec_frame.to_csv(Path(self.decisions) / "decisions.csv")
 
         # compute_metrics

@@ -83,15 +83,23 @@ class SeqIntEncodec(LabelEncodec["list[str, str]", list]):
         return emo_enriched_phoneme_ids
 
     def decode(self, label: list[int]) -> list[tuple[str, str]]:
-        decoupled_ids = (
-            divmod(tok_id) if tok_id not in self.special_token_ids else (None, tok_id)
-            for tok_id in label
-        )
+        divider = len(self.tokenizer.get_vocab()) - len(self.special_token_ids)
+        decoupled_ids = [
+            (0, lab - len(self.special_tokens))
+            if lab in self.special_token_ids
+            else divmod(lab - len(self.special_tokens), divider)
+            for lab in label
+        ]
+
+        decoupled_ids = [
+            (emo_idx, phone_idx + len(self.special_tokens))
+            for emo_idx, phone_idx in decoupled_ids
+        ]
         decoded_ids = [
-            (self.tokenizer.decode(phone_id), self.classes[emo_id])
-            if emo_id is not None
-            else (self.tokenizer.decode(phone_id), None)
-            for phone_id, emo_id in decoupled_ids
+            (self.tokenizer._convert_id_to_token(phone_idx), self.classes[emo_idx])
+            if phone_idx not in self.special_token_ids
+            else (self.tokenizer._convert_id_to_token(phone_idx), "No Emotion")
+            for emo_idx, phone_idx in decoupled_ids
         ]
         return decoded_ids
 

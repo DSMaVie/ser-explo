@@ -19,8 +19,18 @@ class ArgMaxSeqDecision(SequenceLevelDecisionJob):
             ),
         ]
 
-    def decide(self, true: list[int], preds: np.ndarray) -> list[tuple(str, str)]:
-        pass
+    def decode(self, logits: np.ndarray, labels: np.ndarray) -> list[tuple(str, str)]:
+        trues = self.label_encodec.decode(labels)
+
+        probs = np.exp(logits) / (np.exp(logits) + 1)
+        pred = self.label_encodec.decode(np.argmax(probs, axis=1))
+
+        return pred, trues
+
+    def decide(
+        self, dec_frame: pd.DataFrame
+    ) -> pd.DataFrame:
+        breakpoint()
 
     def calculate_metrics(
         self, dec_frame: pd.DataFrame
