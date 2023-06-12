@@ -61,14 +61,13 @@ class BalancedEmotionErrorRate(Metric):
         # breakpoint()
         beers = {}
         for idx, val in enumerate(self.classes):
-            emo_mask = self.true == idx
+            emo_mask = (self.true == idx) | (self.true == val)
             trues = self.true[emo_mask]
             preds = self.pred[emo_mask]
 
-            # breakpoint()
             errors = np.sum(np.not_equal(trues, preds))
             totals = np.sum(trues.shape)
-            beers.update({f"beer_{val}": errors / totals})
+            beers.update({f"beer_{val}": errors / totals if totals != 0 else 0})
 
         total = {"beer_total": np.mean(list(beers.values()))}
 
