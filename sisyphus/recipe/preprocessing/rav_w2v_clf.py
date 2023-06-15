@@ -6,7 +6,7 @@ from pathlib import Path
 from transformers import Wav2Vec2Model, Wav2Vec2PhonemeCTCTokenizer
 
 from erinyes.data.features import NormalizedRawAudio, Wav2Vec2OutputFeatureExtractor
-from erinyes.data.labels import IntEncodec, SeqIntEncodec
+from erinyes.data.labels import EmoEnrichedPhonemeEncodec, IntEncodec
 from erinyes.preprocess.processor import Preprocessor, PreproRecipe
 from erinyes.preprocess.steps import (
     ConditionalSplitter,
@@ -102,14 +102,16 @@ class RavdessW2VPreproJobWithPhonemes(PreprocessingJob):
                 ),
                 PreproRecipe("normalize_text", NormalizeText),
                 PreproRecipe(
-                    "tokenize_text", PhonemizeText, delayed_args=["tokenizer"]
+                    "tokenize_text",
+                    PhonemizeText,
+                    args={"tokenizer_location": Path(self.path_to_tokenizer)},
                 ),
                 PreproRecipe(
                     "update_vocab",
                     UpdateVocab,
                     args={
-                        "tokenizer_location": self.path_to_tokenizer,
-                        "label_col": "Emotion",
+                        "tokenizer_location": Path(self.path_to_tokenizer),
+                        "classes": EMOTIONS,
                         "new_model_location": Path(self.new_model_loc),
                     },
                 ),
@@ -119,9 +121,11 @@ class RavdessW2VPreproJobWithPhonemes(PreprocessingJob):
             ),
             label_encodec=PreproRecipe(
                 "emo_enriched_phoneme_encoding",
-                SeqIntEncodec,
-                args={"classes": EMOTIONS},
-                delayed_args=["tokenizer"],
+                EmoEnrichedPhonemeEncodec,
+                args={
+                    "classes": EMOTIONS,
+                    "tokenizer_location": Path(self.new_model_loc),
+                },
             ),
         )
 
@@ -129,16 +133,16 @@ class RavdessW2VPreproJobWithPhonemes(PreprocessingJob):
         self.utterance_idx.set("file_idx")
         self.label_column.set(("Emotion", "phonemes"))
 
-        tok = Wav2Vec2PhonemeCTCTokenizer.from_pretrained(
-            self.new_model_loc,
-        )
+        # tok = Wav2Vec2PhonemeCTCTokenizer.from_pretrained(
+        #     self.new_model_loc,
+        # )
         delayed_args = dict()
-        for step in itertools.chain(
-            self.processor.steps,
-            [self.processor.feature_extractor, self.processor.label_encodec],
-        ):
-            if step.delayed_args is not None and "tokenizer" in step.delayed_args:
-                delayed_args.update({f"{step.name}:tokenizer": tok})
+        # for step in itertools.chain(
+        #     self.processor.steps,
+        #     [self.processor.feature_extractor, self.processor.label_encodec],
+        # ):
+        #     if step.delayed_args is not None and "tokenizer" in step.delayed_args:
+        #         delayed_args.update({f"{step.name}:tokenizer": tok})
 
         return delayed_args
 

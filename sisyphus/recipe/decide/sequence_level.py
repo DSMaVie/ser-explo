@@ -23,12 +23,12 @@ class ArgMaxSeqDecision(SequenceLevelDecisionJob):
         trues = self.label_encodec.decode(labels)
 
         probs = np.exp(logits) / (np.exp(logits) + 1)
-        pred = self.label_encodec.decode(np.argmax(probs, axis=1))
-
+        pred = self.label_encodec.decode(np.argmax(probs, axis=0))
+        # breakpoint()
         return pred, trues
 
     def decide(self, dec_frame: pd.DataFrame) -> pd.DataFrame:
-        # select bny mode (most common occurence)
+        # select by mode (most common occurrence)
         decisions = (
             dec_frame.filter(["idx", "emotion", "split", "type"])
             .query("emotion != 'No Emotion'")
@@ -36,6 +36,7 @@ class ArgMaxSeqDecision(SequenceLevelDecisionJob):
             .agg({"emotion": pd.Series.mode, "split": "first"})
             .reset_index()
         )
+        # breakpoint()
         # shuffle and drop duplicates for random select of duplicates
         decisions = (
             decisions.explode("emotion")
@@ -50,7 +51,7 @@ class ArgMaxSeqDecision(SequenceLevelDecisionJob):
         self, dec_frame: pd.DataFrame
     ) -> list[dict[str, str | float]]:
         split = dec_frame.split.iloc[0]
-
+        # breakpoint()
         dec_frame_pivot = dec_frame.pivot(index="idx", columns="type", values="emotion")
         trues = dec_frame_pivot.true.values
         preds = dec_frame_pivot.pred.values

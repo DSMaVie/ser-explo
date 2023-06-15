@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import json
+import shutil
 from abc import ABC, abstractmethod, abstractproperty
 from pathlib import Path
 from typing import Generic, TypeVar
 
+import pandas as pd
 import transformers
 
 LabelType = TypeVar("LabelType")
@@ -53,106 +56,164 @@ class IntEncodec(LabelEncodec[str, int]):
         return False
 
 
-class SeqIntEncodec(LabelEncodec["list[str, str]", list]):
+class EmoEnrichedPhonemeEncodec(LabelEncodec):
     def __init__(self, tokenizer_location: Path, classes: list[str]) -> None:
         super().__init__()
 
+        self.tokenizer_location = tokenizer_location
         self.tokenizer = transformers.Wav2Vec2PhonemeCTCTokenizer.from_pretrained(
             tokenizer_location
         )
         self.classes = classes
 
-        self.special_tokens = self.tokenizer.all_special_tokens
-        self.special_token_ids = self.tokenizer.all_special_ids
+    def shrink_vocabulary(self, data: pd.DataFrame, new_location: Path):
+        self.tokenizer._additional_special_tokens = ["|"]
+        self.tokenizer.save_pretrained(new_location)
 
-    def encode(self, phonemes: str, Emotion: str) -> list[int]:
-        emo_index = self.classes.index(Emotion)
+        unique_tokens = set(" ".join(data.phonemes.values).split(" ")).union(
+            set(self.tokenizer.all_special_tokens)
+        )
+        unique_tokens = sorted(
+            unique_tokens,
+            key=lambda s: s in self.tokenizer.all_special_tokens,
+            reverse=True,
+        )
 
-        phoneme_ids = [
-            self.tokenizer._convert_token_to_id(tok) for tok in phonemes.split(" ")
+        # create new vocab from unqie tokens and emotions
+        idx = 0
+        new_vocab = {}
+        for token in unique_tokens:
+            if token in self.tokenizer.all_special_tokens:
+                new_vocab.update({token: idx})
+                idx += 1
+            else:
+                for emo_idx in range(len(self.classes)):
+                    new_vocab.update({f"{token}_{emo_idx}": idx})
+                    idx += 1
+
+        # fix serialized files
+        for file in self.tokenizer_location.iterdir():
+            if file.name == "vocab.json":
+                with (new_location / file.name).open("w", encoding="utf-8") as f:
+                    json.dump(new_vocab, f, indent=2)
+
+            elif file.name == "tokenizer_config.json":
+                with file.open("r") as f:
+                    conf = json.load(f)
+                    conf[
+                        "special_tokens_map_file"
+                    ] = "../facebook_wav2vec2-base-960h/special_tokens_map.json"
+                    with (new_location / file.name).open("w") as f_out:
+                        json.dump(conf, f_out)
+
+            elif file.name == "config.json":
+                conf = transformers.AutoConfig.from_pretrained(file)
+                conf.vocab_size = len(new_vocab)
+                # breakpoint()
+                conf.save_pretrained(new_location)
+
+            elif file.name == "special_tokens_map.json":
+                continue
+                # skip bc already serialized
+
+            else:
+                shutil.copy(file, new_location)
+
+        self.tokenizer_location = new_location
+        self.tokenizer = transformers.Wav2Vec2PhonemeCTCTokenizer.from_pretrained(
+            new_location
+        )
+
+    def encode(self, phonemes: str, Emotion: str) -> list[str]:
+        phonemes = phonemes.strip().split()
+        emo_idx = self.classes.index(Emotion)
+
+        emo_enriched_phones = [
+            f"{phone}_{emo_idx}"
+            if phone not in self.tokenizer.all_special_tokens
+            else phone
+            for phone in phonemes
         ]
-
-        emo_enriched_phoneme_ids = [
-            (emo_index + 1) * (tok_id - len(self.special_tokens))
-            + len(self.special_tokens)  # case emotionally relevant
-            if (tok_id not in self.special_token_ids)  # check case
-            else tok_id  # case not emotionally relevant aka special token
-            for tok_id in phoneme_ids
+        # breakpoint()
+        encoded_phones = [
+            self.tokenizer.convert_tokens_to_ids(emo_phone)
+            for emo_phone in emo_enriched_phones
         ]
+        return encoded_phones
 
-        return emo_enriched_phoneme_ids
-
-    def decode(self, label: list[int]) -> list[tuple[str, str]]:
-        divider = len(self.tokenizer.get_vocab()) - len(self.special_token_ids)
-        decoupled_ids = [
-            (0, lab - len(self.special_tokens))
-            if lab in self.special_token_ids
-            else divmod(lab - len(self.special_tokens), divider)
-            for lab in label
+    def decode(self, pred: list[int]) -> list[list[str]]:
+        decoded_tokens = self.tokenizer.decode(pred).split()
+        split_tokens = [token.split("_") for token in decoded_tokens]
+        # breakpoint()
+        return [
+            [split_tok[0], self.classes[int(split_tok[1])]]
+            if len(split_tok) > 1
+            else [*split_tok, "No Emotion"]
+            for split_tok in split_tokens
         ]
-
-        decoupled_ids = [
-            (emo_idx, phone_idx + len(self.special_tokens))
-            for emo_idx, phone_idx in decoupled_ids
-        ]
-        decoded_ids = [
-            (self.tokenizer._convert_id_to_token(phone_idx), self.classes[emo_idx])
-            if phone_idx not in self.special_token_ids
-            else (self.tokenizer._convert_id_to_token(phone_idx), "No Emotion")
-            for emo_idx, phone_idx in decoupled_ids
-        ]
-        return decoded_ids
 
     def is_mhe(self) -> bool:
         return False
 
     def class_dim(self) -> int:
-        return (
-            self.tokenizer.vocab_size - len(self.tokenizer.all_special_tokens)
-        ) * len(self.classes) + len(self.tokenizer.all_special_tokens)
+        # make sure vocab is shrunk beforehand
+        return self.tokenizer.vocab_size
 
 
-# class LabelEncodec:
-#     def __init__(self, classes: list[str], NofN: bool = False) -> None:
-#         self.NofN = NofN
+# class EmoEnrichedPhonemeEncodec(LabelEncodec["list[str, str]", list]):
+#     def __init__(self, tokenizer_location: Path, classes: list[str]) -> None:
+#         super().__init__()
+
+#         self.tokenizer = transformers.Wav2Vec2PhonemeCTCTokenizer.from_pretrained(
+#             tokenizer_location
+#         )
 #         self.classes = classes
 
-#     def __ints2mhe(self, n_list: list[int]) -> np.ndarray:
-#         mhe_class = np.zeros(len(self.classes), dtype=np.int8)
-#         mhe_class[n_list] = 1
-#         return mhe_class
+#         self.special_tokens = self.tokenizer.all_special_tokens
+#         self.special_token_ids = self.tokenizer.all_special_ids
 
-#     def __str2int(self, s: str) -> int:
-#         return self.classes.index(s)
+#     def encode(self, phonemes: str, Emotion: str) -> list[int]:
+#         emo_index = self.classes.index(Emotion)
 
-#     def __int2str(self, n: int) -> str:
-#         return self.classes[n]
+#         phoneme_ids = [
+#             self.tokenizer._convert_token_to_id(tok) for tok in phonemes.split(" ")
+#         ]
 
-#     def __mhe2ints(self, mhe_label: list[int]) -> int:
-#         return np.where(mhe_label == 1)
+#         emo_enriched_phoneme_ids = [
+#             (emo_index + 1) * (tok_id - len(self.special_tokens))
+#             + len(self.special_tokens)  # case emotionally relevant
+#             if (tok_id not in self.special_token_ids)  # check case
+#             else tok_id  # case not emotionally relevant aka special token
+#             for tok_id in phoneme_ids
+#         ]
 
-#     def encode(self, label: str) -> np.ndarray:
-#         if self.NofN:
-#             n_list = [self.__str2int(lab) for lab in label.split(".")]
-#             return self.__ints2mhe(n_list)
-#         else:
-#             return np.array([self.__str2int(label)])
+#         return emo_enriched_phoneme_ids
 
-#     def decode(self, label: int | list[int]) -> str:
-#         if self.NofN and not isinstance(label, list):
-#             raise TypeError("Expected list of values to decode!")
-#         elif not self.NofN and isinstance(label):
-#             raise TypeError("Did not expect label to be of type list!")
+#     def decode(self, label: list[int]) -> list[tuple[str, str]]:
+#         divider = len(self.tokenizer.get_vocab()) - len(self.special_token_ids)
+#         decoupled_ids = [
+#             (0, lab - len(self.special_tokens))
+#             if lab in self.special_token_ids
+#             else divmod(lab - len(self.special_tokens), divider)
+#             for lab in label
+#         ]
 
-#         if self.NofN:
-#             n_list = self.__mhe2ints(label)
-#             str_list = [self.__int2str(n) for n in n_list]
-#             return ".".join(str_list)
+#         decoupled_ids = [
+#             (emo_idx, phone_idx + len(self.special_tokens))
+#             for emo_idx, phone_idx in decoupled_ids
+#         ]
+#         decoded_ids = [
+#             (self.tokenizer._convert_id_to_token(phone_idx), self.classes[emo_idx])
+#             if phone_idx not in self.special_token_ids
+#             else (self.tokenizer._convert_id_to_token(phone_idx), "No Emotion")
+#             for emo_idx, phone_idx in decoupled_ids
+#         ]
+#         return decoded_ids
 
-#         return self.__int2str(label)
+#     def is_mhe(self) -> bool:
+#         return False
 
-#     def get_class_dim(self):
-#         return len(self.classes)
-
-#     def get_is_mhe(self):
-#         return self.NofN
+#     def class_dim(self) -> int:
+#         return (
+#             self.tokenizer.vocab_size - len(self.tokenizer.all_special_tokens)
+#         ) * len(self.classes) + len(self.tokenizer.all_special_tokens)

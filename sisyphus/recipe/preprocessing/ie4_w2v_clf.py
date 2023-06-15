@@ -7,7 +7,7 @@ from pathlib import Path
 from transformers import Wav2Vec2Model, Wav2Vec2PhonemeCTCTokenizer
 
 from erinyes.data.features import NormalizedRawAudio, Wav2Vec2OutputFeatureExtractor
-from erinyes.data.labels import IntEncodec, SeqIntEncodec
+from erinyes.data.labels import EmoEnrichedPhonemeEncodec, IntEncodec
 from erinyes.preprocess.processor import Preprocessor, PreproRecipe
 from erinyes.preprocess.steps import (
     ConditionalSplitter,
@@ -121,8 +121,8 @@ class IEM4ProcessorForWav2Vec2WithPhonemes(PreprocessingJob):
                     "update_vocab",
                     UpdateVocab,
                     args={
-                        "tokenizer_location": self.path_to_tokenizer,
-                        "label_col": "Emotion",
+                        "tokenizer_location": Path(self.path_to_tokenizer),
+                        "classes": EMOTIONS,
                         "new_model_location": Path(self.new_model_loc),
                     },
                 ),
@@ -131,8 +131,8 @@ class IEM4ProcessorForWav2Vec2WithPhonemes(PreprocessingJob):
                 "raw_extractor", NormalizedRawAudio, args={"resample_to": 16_000}
             ),
             label_encodec=PreproRecipe(
-                "integer_encoding",
-                SeqIntEncodec,
+                "emp_enriched_phoneme_encoding",
+                EmoEnrichedPhonemeEncodec,
                 args={
                     "classes": EMOTIONS,
                     "tokenizer_location": Path(self.new_model_loc),
