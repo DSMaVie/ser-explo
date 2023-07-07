@@ -37,10 +37,16 @@ class DownloadPretrainedModelJob(Job):
         model_loc = Path(self.out)
 
         logger.info(f"downloading {self.model_name} to {model_loc}")
+
+        revision = (
+            "b54ced2147b8f08e5fcee06312c63737fccf87d5"
+            if "xlsr" in self.model_name
+            else "main"
+        )
         if self.is_ctc_model:
-            model = Wav2Vec2ForCTC.from_pretrained(self.model_name)
+            model = Wav2Vec2ForCTC.from_pretrained(self.model_name, revision=revision)
         else:
-            model = Wav2Vec2Model.from_pretrained(self.model_name)
+            model = Wav2Vec2Model.from_pretrained(self.model_name, revision=revision)
 
         model.save_pretrained(model_loc)
 

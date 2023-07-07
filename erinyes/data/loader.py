@@ -15,17 +15,19 @@ logger = logging.getLogger(__name__)
 
 def pad_collate(
     data: list[tuple[torch.TensorType, torch.TensorType]],
+    padding_token_id: float,
     return_attention_mask: bool = True,
-    padding_token_id: float = 0.0,
     labels_are_seqs: bool = False,
 ):
     signals, labels = zip(*data)
-    seqs = pad_sequence(signals, batch_first=True, padding_value=padding_token_id)
+    seqs = pad_sequence(signals, batch_first=True, padding_value=-100)
     # logger.info(f"got batch {seqs} of sequences of shape {seqs.shape}")
 
     return_dict = {"input_values": seqs}
     if return_attention_mask:
-        return_dict["attention_mask"] = ~(seqs == padding_token_id)
+        return_dict["attention_mask"] = ~(seqs == -100)
+
+    seqs = torch.where(seqs == -100, seqs, torch.full_like(seqs, padding_token_id))
 
     if labels_are_seqs:
         labels = [label.squeeze() for label in labels]

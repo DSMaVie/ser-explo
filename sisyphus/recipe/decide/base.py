@@ -65,6 +65,8 @@ class UtteranceLevelDecisionJob(Job):
             metric.track(dec.pred.values, dec.true.values)
 
             for metric_name, res in metric.calc().items():
+                # if metric_name != "beer_total" and metric_name.startswith("beer"):
+                #     breakpoint()
                 results.append(
                     {
                         "split": split.name.lower(),

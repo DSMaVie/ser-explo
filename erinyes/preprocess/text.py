@@ -44,11 +44,11 @@ class PhonemizeText:
         text_keyword = "transcript" if "transcript" in data.columns else "Statement"
 
         data["phonemes"] = data[text_keyword].progress_apply(
-            lambda s: self.tokenizer.phonemize(s)
+            lambda s: self.tokenizer.phonemize(s).rstrip(" |").replace("|","<NS>")
         )
-        data["phonemes"] = data["phonemes"].progress_apply(
-            lambda s: f"<s> {s[:-1]}</s>"
-        )  # add beginning and end tokens
+        # data["phonemes"] = data["phonemes"].progress_apply(
+        #     lambda s: f"<s> {s[:-1]}</s>"
+        # )  # add beginning and end tokens
         return data
 
 

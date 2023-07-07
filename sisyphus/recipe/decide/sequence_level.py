@@ -24,7 +24,7 @@ class ArgMaxSeqDecision(SequenceLevelDecisionJob):
 
         probs = np.exp(logits) / (np.exp(logits) + 1)
         pred = self.label_encodec.decode(np.argmax(probs, axis=0))
-        # breakpoint()
+        breakpoint()
         return pred, trues
 
     def decide(self, dec_frame: pd.DataFrame) -> pd.DataFrame:

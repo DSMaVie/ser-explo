@@ -76,7 +76,7 @@ class LJFTTrainingJob(Job):
         train_args = TrainingArguments(
             output_dir=self.out_path.get_path(),
             do_train=True,
-            num_train_epochs=50,
+            num_train_epochs=25,
             gradient_checkpointing=True,
             per_device_train_batch_size=2,
             per_device_eval_batch_size=2,
@@ -144,23 +144,40 @@ class LJFTTrainingJob(Job):
 
         # Training
         if train_args.do_train:
-            checkpoint = None
-            if train_args.resume_from_checkpoint is not None:
-                checkpoint = train_args.resume_from_checkpoint
-            elif last_checkpoint is not None:
-                checkpoint = last_checkpoint
+            # first trainer pass
+            for param in model.encoder.parameters():
+                param.requires_grad = False
 
-            logger.info(f"found cp {checkpoint}")
-            train_result = trainer.train(resume_from_checkpoint=checkpoint)
-            # metrics = train_result.metrics
-
-            # metrics["train_samples"] = len(train_data)
-
+            # logger.info(f"found cp {checkpoint}")
+            first_step_result = trainer.train()
             trainer.save_model()  # Saves the tokenizer too for easy upload
-
-            # trainer.log_metrics("train", metrics)
-            # trainer.save_metrics("train", metrics)
             trainer.save_state()
+
+
+            #second trainer pass
+            for param in model.encoder.parameters():
+                param.requires_grad = True
+
+            cp = train_args.output_dir
+
+            ## setup leading from best eval_loss
+            train_args.load_best_model_at_end = True
+            train_args.metric_for_best_model="eval_loss"
+            train_args.num_train_epochs=int(train_args.num_train_epochs * 2)
+
+            ## harmonize lr
+            train_args.learning_rate = first_step_result.train_loss
+            train_args.warmup_steps = 0
+
+            trainer = Trainer(
+                model=model,
+                args=train_args,
+                train_dataset=train_data,
+                eval_dataset=eval_data,
+                data_collator=partial(pad_collate, return_attention_mask=True,  padding_token_id=0),
+                compute_metrics=self.met_track,
+            )
+            trainer.train(resume_from_checkpoint=cp)
 
     def tasks(self):
         if self.profile_first:

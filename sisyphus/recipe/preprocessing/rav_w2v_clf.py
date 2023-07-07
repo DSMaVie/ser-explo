@@ -20,7 +20,16 @@ from sisyphus import tk
 
 from ..preprocessing.base import PreprocessingJob
 
-EMOTIONS = ["Happiness", "Anger", "Sadness", "Fear", "Disgust", "Surprise"]
+EMOTIONS = [
+    "Happiness",
+    "Anger",
+    "Sadness",
+    "Fear",
+    "Disgust",
+    "Surprise",
+    "Calmness",
+    "Neutral",
+]
 
 
 class RavdessW2VPreproJob(PreprocessingJob):
@@ -35,9 +44,9 @@ class RavdessW2VPreproJob(PreprocessingJob):
                     "normalize_labels",
                     LabelNormalizer,
                 ),
-                PreproRecipe(
-                    "filter_emotions", EmotionFilterNFold, args={"keep": EMOTIONS}
-                ),
+                # PreproRecipe(
+                #     "filter_emotions", EmotionFilterNFold, args={"keep": EMOTIONS}
+                # ),
                 PreproRecipe(
                     "split_on_speaker",
                     ConditionalSplitter,
@@ -82,9 +91,9 @@ class RavdessW2VPreproJobWithPhonemes(PreprocessingJob):
                     "normalize_labels",
                     LabelNormalizer,
                 ),
-                PreproRecipe(
-                    "filter_emotions", EmotionFilterNFold, args={"keep": EMOTIONS}
-                ),
+                # PreproRecipe(
+                #     "filter_emotions", EmotionFilterNFold, args={"keep": EMOTIONS}
+                # ),
                 PreproRecipe(
                     "split_on_speaker",
                     ConditionalSplitter,
@@ -161,9 +170,9 @@ class RavdessW2VPreproJobWithModelFeatures(PreprocessingJob):
                     "normalize_labels",
                     LabelNormalizer,
                 ),
-                PreproRecipe(
-                    "filter_emotions", EmotionFilterNFold, args={"keep": EMOTIONS}
-                ),
+                # PreproRecipe(
+                #     "filter_emotions", EmotionFilterNFold, args={"keep": EMOTIONS}
+                # ),
                 PreproRecipe(
                     "split_on_speaker",
                     ConditionalSplitter,

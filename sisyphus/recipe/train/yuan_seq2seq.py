@@ -4,8 +4,12 @@ import logging
 import os
 from functools import partial
 
-from transformers import Seq2SeqTrainer, Seq2SeqTrainingArguments, Wav2Vec2ForCTC
-from transformers.trainer_utils import get_last_checkpoint
+from transformers import (
+    Seq2SeqTrainer,
+    Seq2SeqTrainingArguments,
+    AutoConfig,
+    Wav2Vec2ForCTC,
+)
 
 from erinyes.data.hdf_dataset import Hdf5Dataset
 from erinyes.data.loader import pad_collate
@@ -77,12 +81,13 @@ class HFSeq2SeqTrainingJob(Job):
             eval_steps=20,
             weight_decay=0.005,
             warmup_steps=50,
-            load_best_model_at_end=True,
-            metric_for_best_model="eval_loss",
+            # load_best_model_at_end=True,
+            # metric_for_best_model="eval_loss",
         )
 
         data_path = gs.file_caching(self.data_path.join_right("processed_data.h5"))
 
+        config = AutoConfig.from_pretrained(self.pretrained_model_path.get_path())
         model = self.prepare_training()
         train_data = Hdf5Dataset(
             src_path=data_path,
@@ -100,51 +105,78 @@ class HFSeq2SeqTrainingJob(Job):
             eval_dataset=eval_data,
             # compute_metrics=self.met_track,
             data_collator=partial(
-                pad_collate, return_attention_mask=True, labels_are_seqs=True
+                pad_collate,
+                return_attention_mask=True,
+                labels_are_seqs=True,
+                padding_token_id=config.pad_token_id,
             ),
         )
 
-        last_checkpoint = None
-        if (
-            os.path.isdir(train_args.output_dir)
-            and train_args.do_train
-            and not train_args.overwrite_output_dir
-        ):
-            last_checkpoint = get_last_checkpoint(train_args.output_dir)
-            if last_checkpoint is None and len(os.listdir(train_args.output_dir)) > 0:
-                raise ValueError(
-                    f"Output directory ({train_args.output_dir}) already exists and is not empty. "
-                    "Use --overwrite_output_dir to overcome."
-                )
-            elif (
-                last_checkpoint is not None
-                and train_args.resume_from_checkpoint is None
-            ):
-                logger.info(
-                    f"Checkpoint detected, resuming training at {last_checkpoint}. To avoid this behavior, change "
-                    "the `--output_dir` or add `--overwrite_output_dir` to train from scratch."
-                )
-        logger.info(f"last checkpoint is {last_checkpoint}")
+        # last_checkpoint = None
+        # if (
+        #     os.path.isdir(train_args.output_dir)
+        #     and train_args.do_train
+        #     and not train_args.overwrite_output_dir
+        # ):
+        #     last_checkpoint = get_last_checkpoint(train_args.output_dir)
+        #     if last_checkpoint is None and len(os.listdir(train_args.output_dir)) > 0:
+        #         raise ValueError(
+        #             f"Output directory ({train_args.output_dir}) already exists and is not empty. "
+        #             "Use --overwrite_output_dir to overcome."
+        #         )
+        #     elif (
+        #         last_checkpoint is not None
+        #         and train_args.resume_from_checkpoint is None
+        #     ):
+        #         logger.info(
+        #             f"Checkpoint detected, resuming training at {last_checkpoint}. To avoid this behavior, change "
+        #             "the `--output_dir` or add `--overwrite_output_dir` to train from scratch."
+        #         )
+        # logger.info(f"last checkpoint is {last_checkpoint}")
 
         # Training
         if train_args.do_train:
-            checkpoint = None
-            if train_args.resume_from_checkpoint is not None:
-                checkpoint = train_args.resume_from_checkpoint
-            elif last_checkpoint is not None:
-                checkpoint = last_checkpoint
+            # checkpoint = None
+            # if train_args.resume_from_checkpoint is not None:
+            #     checkpoint = train_args.resume_from_checkpoint
+            # elif last_checkpoint is not Nqone:
+            #     checkpoint = last_checkpoint
 
-            logger.info(f"found cp {checkpoint}")
-            train_result = trainer.train(resume_from_checkpoint=checkpoint)
-            # metrics = train_result.metrics
+            # first trainer pass
+            for param in model.wav2vec2.encoder.parameters():
+                param.requires_grad = False
 
-            # metrics["train_samples"] = len(train_data)
-
+            # logger.info(f"found cp {checkpoint}")
+            first_step_result = trainer.train()
             trainer.save_model()  # Saves the tokenizer too for easy upload
-
-            # trainer.log_metrics("train", metrics)
-            # trainer.save_metrics("train", metrics)
             trainer.save_state()
+
+            # second trainer pass
+            for param in model.wav2vec2.encoder.parameters():
+                param.requires_grad = True
+
+            cp = train_args.output_dir
+            train_args.load_best_model_at_end = True
+            train_args.metric_for_best_model = "eval_loss"
+            train_args.num_train_epochs = int(train_args.num_train_epochs * 1.5)
+
+            train_args.learning_rate = first_step_result.train_loss
+            train_args.warmup_steps = 0
+
+            trainer = Seq2SeqTrainer(
+                model=model,
+                args=train_args,
+                train_dataset=train_data,
+                eval_dataset=eval_data,
+                # compute_metrics=self.met_track,
+                data_collator=partial(
+                    pad_collate,
+                    return_attention_mask=True,
+                    labels_are_seqs=True,
+                    padding_token_id=config.pad_token_id,
+                ),
+            )
+            trainer.train(resume_from_checkpoint=cp)
 
     def resume(self):
         self.train_args.resume_from_checkpoint = True

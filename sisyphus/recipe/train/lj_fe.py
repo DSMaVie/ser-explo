@@ -57,6 +57,8 @@ class LJFETrainingJob(Job):
 
         model_args = {
             "clf_out_dim": label_encodec.class_dim,
+            "hidden_size": 80,
+            "p_dropout": 0.2,
         }
         self.model_args.set(model_args)
 
@@ -82,7 +84,7 @@ class LJFETrainingJob(Job):
             evaluation_strategy="steps",
             learning_rate=1e-5,
             weight_decay=0.005,
-            warmup_steps=50,
+            warmup_steps=1000,
             dataloader_num_workers=self.rqmts.get("cpu", 0),
             report_to="tensorboard",
             overwrite_output_dir=True,
@@ -138,23 +140,37 @@ class LJFETrainingJob(Job):
 
         # Training
         if train_args.do_train:
-            checkpoint = None
-            if train_args.resume_from_checkpoint is not None:
-                checkpoint = train_args.resume_from_checkpoint
-            elif last_checkpoint is not None:
-                checkpoint = last_checkpoint
+            # first trainer pass
 
-            logger.info(f"found cp {checkpoint}")
-            train_result = trainer.train(resume_from_checkpoint=checkpoint)
-            # metrics = train_result.metrics
-
-            # metrics["train_samples"] = len(train_data)
-
+            # logger.info(f"found cp {checkpoint}")
+            first_step_result = trainer.train()
             trainer.save_model()  # Saves the tokenizer too for easy upload
-
-            # trainer.log_metrics("train", metrics)
-            # trainer.save_metrics("train", metrics)
             trainer.save_state()
+
+            # second trainer pass
+            for param in model.encoder.parameters():
+                param.requires_grad = True
+
+            cp = train_args.output_dir
+
+            train_args.num_train_epochs = int(train_args.num_train_epochs * 0.5)
+            train_args.lr_scheduler_type = "constant"
+            train_args.warmup_steps = 0
+
+            ## harmonize lr
+            train_args.learning_rate = first_step_result.train_loss
+            train_args.warmup_steps = 0
+
+            trainer = Trainer(
+                model=model,
+                args=train_args,
+                train_dataset=train_data,
+                eval_dataset=eval_data,
+                data_collator=partial(pad_collate, return_attention_mask=False),
+                compute_metrics=self.met_track,
+                padding_token_id=0,
+            )
+            trainer.train(resume_from_checkpoint=cp)
 
     def resume(self):
         self.train_args.resume_from_checkpoint = True

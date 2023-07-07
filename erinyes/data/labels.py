@@ -62,12 +62,12 @@ class EmoEnrichedPhonemeEncodec(LabelEncodec):
 
         self.tokenizer_location = tokenizer_location
         self.tokenizer = transformers.Wav2Vec2PhonemeCTCTokenizer.from_pretrained(
-            tokenizer_location
+            tokenizer_location#, pad_token="<blank>"
         )
         self.classes = classes
 
     def shrink_vocabulary(self, data: pd.DataFrame, new_location: Path):
-        self.tokenizer._additional_special_tokens = ["|"]
+        self.tokenizer._additional_special_tokens = ["<NS>"]
         self.tokenizer.save_pretrained(new_location)
 
         unique_tokens = set(" ".join(data.phonemes.values).split(" ")).union(
@@ -109,6 +109,12 @@ class EmoEnrichedPhonemeEncodec(LabelEncodec):
             elif file.name == "config.json":
                 conf = transformers.AutoConfig.from_pretrained(file)
                 conf.vocab_size = len(new_vocab)
+
+                (
+                    conf.bos_token_id,
+                    conf.eos_token_id,
+                    conf.pad_token_id,
+                ) = self.tokenizer.convert_tokens_to_ids(["<s>", "</s>", "<pad>"])
                 # breakpoint()
                 conf.save_pretrained(new_location)
 

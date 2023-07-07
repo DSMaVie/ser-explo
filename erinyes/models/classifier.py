@@ -20,13 +20,14 @@ class PooledSeqClassifier(nn.Module):
 
 class HFPooledSeqClassifier(Wav2Vec2Model):
     # subclass is hacky but works. maybe long init time
-    def __init__(self, config: Wav2Vec2Config, clf_out_dim: int) -> None:
+    def __init__(self, config: Wav2Vec2Config, hidden_size:int, clf_out_dim: int, p_dropout: float) -> None:
         super().__init__(config)
         # breakpoint()
         self.classifier = nn.Sequential(
-            nn.Linear(out_features=config.hidden_size, in_features=config.conv_dim[-1]),
+            nn.Linear(out_features=hidden_size, in_features=config.conv_dim[-1]),
+            nn.Dropout(p=p_dropout),
             nn.Tanh(),
-            nn.Linear(out_features=clf_out_dim, in_features=config.hidden_size),
+            nn.Linear(out_features=clf_out_dim, in_features=hidden_size),
         )
 
     def forward(self, input_values, labels=None):
