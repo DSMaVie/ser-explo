@@ -64,7 +64,7 @@ class HFSeq2SeqTrainingJob(Job):
 
     def run(self):
         train_args = Seq2SeqTrainingArguments(
-            dataloader_num_workers=self.rqmts.get("cpu", 0),
+            dataloader_num_workers=0,  # self.rqmts.get("cpu", 0),
             report_to="tensorboard",
             overwrite_output_dir=True,
             output_dir=self.out_path.get_path(),
