@@ -98,7 +98,7 @@ class LJFTTrainingJob(Job):
         data_path = gs.file_caching(self.data_path.join_right("processed_data.h5"))
         # breakpoint()
 
-        model.freeze_feature_encoder()
+        # model.freeze_feature_encoder()
         train_data = Hdf5Dataset(
             src_path=data_path,
             split=Split.TRAIN,
@@ -113,7 +113,7 @@ class LJFTTrainingJob(Job):
             args=train_args,
             train_dataset=train_data,
             eval_dataset=eval_data,
-            data_collator=partial(pad_collate, return_attention_mask=True),
+            data_collator=partial(pad_collate, return_attention_mask=True, padding_token_id=0),
             compute_metrics=self.met_track,
         )
 
@@ -145,7 +145,7 @@ class LJFTTrainingJob(Job):
         # Training
         if train_args.do_train:
             # first trainer pass
-            for param in model.encoder.parameters():
+            for param in model.wav2vec2.parameters():
                 param.requires_grad = False
 
             # logger.info(f"found cp {checkpoint}")
@@ -155,8 +155,10 @@ class LJFTTrainingJob(Job):
 
 
             #second trainer pass
-            for param in model.encoder.parameters():
+            for param in model.wav2vec2.parameters():
                 param.requires_grad = True
+
+            model.freeze_feature_encoder()
 
             cp = train_args.output_dir
 
@@ -166,7 +168,7 @@ class LJFTTrainingJob(Job):
             train_args.num_train_epochs=int(train_args.num_train_epochs * 2)
 
             ## harmonize lr
-            train_args.learning_rate = first_step_result.train_loss
+            train_args.learning_rate = first_step_result.training_loss
             train_args.warmup_steps = 0
 
             trainer = Trainer(

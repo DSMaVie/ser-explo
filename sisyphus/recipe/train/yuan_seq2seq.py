@@ -5,9 +5,9 @@ import os
 from functools import partial
 
 from transformers import (
+    AutoConfig,
     Seq2SeqTrainer,
     Seq2SeqTrainingArguments,
-    AutoConfig,
     Wav2Vec2ForCTC,
 )
 
@@ -72,7 +72,7 @@ class HFSeq2SeqTrainingJob(Job):
             gradient_checkpointing=True,
             evaluation_strategy="steps",
             learning_rate=5e-5,
-            num_train_epochs=50,
+            num_train_epochs=200,
             per_device_train_batch_size=2,
             per_device_eval_batch_size=2,
             gradient_accumulation_steps=16,
@@ -143,25 +143,28 @@ class HFSeq2SeqTrainingJob(Job):
             #     checkpoint = last_checkpoint
 
             # first trainer pass
-            for param in model.wav2vec2.encoder.parameters():
+            for param in model.wav2vec2.parameters():
                 param.requires_grad = False
 
             # logger.info(f"found cp {checkpoint}")
             first_step_result = trainer.train()
             trainer.save_model()  # Saves the tokenizer too for easy upload
             trainer.save_state()
+            cp = train_args.output_dir
 
             # second trainer pass
-            for param in model.wav2vec2.encoder.parameters():
+            for param in model.wav2vec2.parameters():
                 param.requires_grad = True
+            model.freeze_feature_encoder()
 
-            cp = train_args.output_dir
             train_args.load_best_model_at_end = True
             train_args.metric_for_best_model = "eval_loss"
             train_args.num_train_epochs = int(train_args.num_train_epochs * 1.5)
 
-            train_args.learning_rate = first_step_result.train_loss
+            train_args.learning_rate = first_step_result.training_loss
             train_args.warmup_steps = 0
+
+            ## reload objects
 
             trainer = Seq2SeqTrainer(
                 model=model,

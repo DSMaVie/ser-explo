@@ -17,7 +17,12 @@ from erinyes.preprocess.steps import (
     TransformStartStopToDurations,
     ValFromTrainSplitter,
 )
-from erinyes.preprocess.text import NormalizeText, PhonemizeText, UpdateVocab
+from erinyes.preprocess.text import (
+    EnsureMinTokens,
+    NormalizeText,
+    PhonemizeText,
+    UpdateVocab,
+)
 from erinyes.util.enums import Dataset
 from sisyphus import tk
 
@@ -116,6 +121,11 @@ class IEM4ProcessorForWav2Vec2WithPhonemes(PreprocessingJob):
                     "tokenize_text",
                     PhonemizeText,
                     args={"tokenizer_location": Path(self.path_to_tokenizer)},
+                ),
+                PreproRecipe(
+                    "ensure adequate phone number",
+                    EnsureMinTokens,
+                    args={"column": "phonemes", "min_number": 3},
                 ),
                 PreproRecipe(
                     "update_vocab",

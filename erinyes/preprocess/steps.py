@@ -318,10 +318,11 @@ class MinmaxDrop:
         self.max = max
 
     def run(self, data: pd.DataFrame) -> pd.DataFrame:
-        to_drop = data.query(f"{self.column} < {self.min}").query(
-            f"{self.column} > {self.max}"
+        to_drop = data.query(
+            f"{self.column} < {self.min} or {self.column} > {self.max}"
         )
         logger.info(
             f"found {len(to_drop)} rows outside minmax ({self.min}, {self.max}) for column {self.column} of {len(data)} instances in total."
         )
         return data.drop(index=to_drop.index)
+

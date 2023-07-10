@@ -55,45 +55,47 @@ class TrainAnalysisJob(Job):
         data = pd.concat(
             [train_data, validation_data], axis=0, ignore_index=True, join="outer"
         )
+        data.write_csv(Path(self.out) / "loss.csv")
 
-        def plotter(ax):
-            ax = sns.lineplot(
-                data=data,
-                x="epoch",
-                y="loss",
-                hue="kind",
-                style="kind",
-                ax=ax,
-                estimator=None,
-            )
-            title = (
-                f"{meta_data['data_condition']} | {meta_data['base_model']}"
-                if "base_model" in meta_data
-                else meta_data["data_condition"]
-            )
-            ax.set_title(title)
+        # def plotter(ax):
+        #     ax = sns.lineplot(
+        #         data=data,
+        #         x="epoch",
+        #         y="loss",
+        #         hue="kind",
+        #         style="kind",
+        #         ax=ax,
+        #         estimator=None,
+        #     )
+        #     title = (
+        #         f"{meta_data['data_condition']} | {meta_data['base_model']}"
+        #         if "base_model" in meta_data
+        #         else meta_data["data_condition"]
+        #     )
+        #     ax.set_title(title)
 
-        serialize_plot(plotter, Path(self.out) / "loss")
+        # serialize_plot(plotter, Path(self.out) / "loss")
 
     def produce_lr_plot(self, data: pd.DataFrame, meta_data: dict):
         data = data.filter(["epoch", "learning_rate"]).dropna()
 
-        def plotter(ax):
-            ax = sns.lineplot(
-                data=data,
-                x="epoch",
-                y="learning_rate",
-                ax=ax,
-                estimator=None,
-            )
-            title = (
-                f"{meta_data['data_condition']} | {meta_data['base_model']}"
-                if "base_model" in meta_data
-                else meta_data["data_condition"]
-            )
-            ax.set_title(title)
+        data.write_csv(Path(self.out) / "lr.csv")
+        # def plotter(ax):
+        #     ax = sns.lineplot(
+        #         data=data,
+        #         x="epoch",
+        #         y="learning_rate",
+        #         ax=ax,
+        #         estimator=None,
+        #     )
+        #     title = (
+        #         f"{meta_data['data_condition']} | {meta_data['base_model']}"
+        #         if "base_model" in meta_data
+        #         else meta_data["data_condition"]
+        #     )
+        #     ax.set_title(title)
 
-        serialize_plot(plotter, Path(self.out) / "learning_rate")
+        # serialize_plot(plotter, Path(self.out) / "learning_rate")
 
     def run(self):
         data, meta_data = self.load_info()
