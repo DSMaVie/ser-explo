@@ -82,6 +82,7 @@ class LJFETrainingJob(Job):
             logging_steps=200,
             eval_steps=200,
             evaluation_strategy="steps",
+            # lr_scheduler_type="constant_with_warmup",
             learning_rate=1e-5,
             weight_decay=0.005,
             warmup_steps=1000,
@@ -148,35 +149,35 @@ class LJFETrainingJob(Job):
             first_step_result = trainer.train()
             trainer.save_model()  # Saves the tokenizer too for easy upload
             trainer.save_state()
-            cp = train_args.output_dir
+            # cp = train_args.output_dir
 
-            # second trainer pass
-            ## unlock grads
-            for param in model.encoder.parameters():
-                param.requires_grad = True
+            # # second trainer pass
+            # ## unlock grads
+            # for param in model.encoder.parameters():
+            #     param.requires_grad = True
 
-            ## change args
-            train_args.num_train_epochs = int(train_args.num_train_epochs * 1.5)
-            train_args.lr_scheduler_type = "constant"
-            train_args.warmup_steps = 0
+            # ## change args
+            # train_args.num_train_epochs = int(train_args.num_train_epochs * 1.5)
+            # train_args.lr_scheduler_type = "constant"
+            # train_args.warmup_steps = 0
 
-            ## harmonize lr
-            train_args.learning_rate = first_step_result.training_loss
-            train_args.warmup_steps = 0
+            # ## harmonize lr
+            # train_args.learning_rate = first_step_result.training_loss
+            # train_args.warmup_steps = 0
 
-            ## reload objects
+            # ## reload objects
 
-            trainer = Trainer(
-                model=model,
-                args=train_args,
-                train_dataset=train_data,
-                eval_dataset=eval_data,
-                data_collator=partial(
-                    pad_collate, padding_token_id=0, return_attention_mask=False
-                ),
-                compute_metrics=self.met_track,
-            )
-            trainer.train(resume_from_checkpoint=cp)
+            # trainer = Trainer(
+            #     model=model,
+            #     args=train_args,
+            #     train_dataset=train_data,
+            #     eval_dataset=eval_data,
+            #     data_collator=partial(
+            #         pad_collate, padding_token_id=0, return_attention_mask=False
+            #     ),
+            #     compute_metrics=self.met_track,
+            # )
+            # trainer.train(resume_from_checkpoint=cp)
 
     def resume(self):
         self.train_args.resume_from_checkpoint = True

@@ -12,6 +12,7 @@ from erinyes.preprocess.processor import Preprocessor, PreproRecipe
 from erinyes.preprocess.steps import (
     ConditionalSplitter,
     EmotionFilterNFold,
+    ExcludeExamples,
     LabelNormalizer,
     MinmaxDrop,
     TransformStartStopToDurations,
@@ -125,7 +126,19 @@ class IEM4ProcessorForWav2Vec2WithPhonemes(PreprocessingJob):
                 PreproRecipe(
                     "ensure adequate phone number",
                     EnsureMinTokens,
-                    args={"column": "phonemes", "min_number": 3},
+                    args={"column": "phonemes", "min_number": 6},
+                ),
+                PreproRecipe(
+                    "cut troublemakers",
+                    ExcludeExamples,
+                    args={
+                        "exclusion_list": [
+                            "Ses01F_script01_3_F012",
+                            "Ses01F_script03_1_F020",
+                            "Ses01F_script03_1_M036",
+                        ],
+                        "column": "file_idx",
+                    },
                 ),
                 PreproRecipe(
                     "update_vocab",

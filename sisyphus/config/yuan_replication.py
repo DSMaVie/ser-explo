@@ -49,7 +49,7 @@ def run_yuan():
         train_job = HFSeq2SeqTrainingJob(
             data_path=pp_job.out_path,
             pretrained_model_path=pp_job.new_model_loc,
-            rqmts={"cpu": 4, "mem": 16, "gpu": 1, "time": 24},
+            rqmts={"cpu": 4, "mem": 20, "gpu": 1, "time": 24},
             profile_first=False,
         )
         # tk.register_output(f"{pp_job.processor.src.name.lower()}/yuan_base", train_job.out_path)

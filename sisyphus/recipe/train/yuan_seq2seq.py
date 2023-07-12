@@ -64,7 +64,7 @@ class HFSeq2SeqTrainingJob(Job):
 
     def run(self):
         train_args = Seq2SeqTrainingArguments(
-            dataloader_num_workers=0,  # self.rqmts.get("cpu", 0),
+            dataloader_num_workers=self.rqmts.get("cpu", 0),
             report_to="tensorboard",
             overwrite_output_dir=True,
             output_dir=self.out_path.get_path(),
@@ -72,15 +72,15 @@ class HFSeq2SeqTrainingJob(Job):
             gradient_checkpointing=True,
             evaluation_strategy="steps",
             learning_rate=5e-5,
-            num_train_epochs=200,
+            max_steps=10_000,
             per_device_train_batch_size=2,
             per_device_eval_batch_size=2,
             gradient_accumulation_steps=16,
-            save_steps=20,
-            logging_steps=10,
-            eval_steps=20,
+            save_steps=50,
+            logging_steps=25,
+            eval_steps=50,
             weight_decay=0.005,
-            warmup_steps=50,
+            warmup_steps=1000,
             # load_best_model_at_end=True,
             # metric_for_best_model="eval_loss",
         )
@@ -159,10 +159,11 @@ class HFSeq2SeqTrainingJob(Job):
 
             train_args.load_best_model_at_end = True
             train_args.metric_for_best_model = "eval_loss"
-            train_args.num_train_epochs = int(train_args.num_train_epochs * 1.5)
+            train_args.max_steps = 15_000
 
             train_args.learning_rate = first_step_result.training_loss
             train_args.warmup_steps = 0
+            train_args.lor_scheduler_type = "constant"
 
             ## reload objects
 

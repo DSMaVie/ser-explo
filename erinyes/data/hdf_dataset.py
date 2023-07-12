@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import random
 from functools import cached_property
 
 import h5py
@@ -57,4 +58,4 @@ class Hdf5Dataset(Dataset):
                 if isinstance(curr_block[key], h5py.Group)
                 else None
             )
-        return keys
+        return random.shuffle(keys)

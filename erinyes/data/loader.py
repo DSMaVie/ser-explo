@@ -31,13 +31,13 @@ def pad_collate(
 
     if labels_are_seqs:
         labels_squeezed = [label.squeeze() for label in labels]
-        try:
-            return_dict["labels"] = pad_sequence(
-                labels_squeezed, batch_first=True, padding_value=-100
-            )  # padding value of -100 is unique for hf ctc models. it wont be used for loss calc
-        except IndexError as e:
-            breakpoint()
-            raise IndexError(f"got {labels_squeezed}, that are throwing errors.") from e
+        # try:
+        return_dict["labels"] = pad_sequence(
+            labels_squeezed, batch_first=True, padding_value=-100
+        )  # padding value of -100 is unique for hf ctc models. it wont be used for loss calc
+        # except IndexError as e:
+        #     breakpoint()
+        #     raise IndexError(f"got {labels_squeezed}, that are throwing errors.") from e
     else:
         return_dict["labels"] = torch.stack(labels).squeeze(dim=1).long()
 

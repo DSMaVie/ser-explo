@@ -79,7 +79,9 @@ class EnsureMinTokens:
         self.min_number = min_number
 
     def run(self, data: pd.DataFrame) -> pd.DataFrame:
-        to_keep = data[self.column].apply(lambda s: len(s.split()) > self.min_number)
+        to_keep = (
+            data[self.column].dropna().apply(lambda s: len(s.split()) > self.min_number)
+        )
 
         logger.info(
             f"dropping {100 - len(to_keep)/len(data)*100:.1f} percent of instances"

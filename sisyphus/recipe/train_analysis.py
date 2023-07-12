@@ -55,7 +55,7 @@ class TrainAnalysisJob(Job):
         data = pd.concat(
             [train_data, validation_data], axis=0, ignore_index=True, join="outer"
         )
-        data.write_csv(Path(self.out) / "loss.csv")
+        data.to_csv( Path(self.out) / "loss.csv", index=None)
 
         # def plotter(ax):
         #     ax = sns.lineplot(
@@ -79,7 +79,7 @@ class TrainAnalysisJob(Job):
     def produce_lr_plot(self, data: pd.DataFrame, meta_data: dict):
         data = data.filter(["epoch", "learning_rate"]).dropna()
 
-        data.write_csv(Path(self.out) / "lr.csv")
+        data.to_csv( Path(self.out) / "lr.csv", index=None)
         # def plotter(ax):
         #     ax = sns.lineplot(
         #         data=data,

@@ -326,3 +326,11 @@ class MinmaxDrop:
         )
         return data.drop(index=to_drop.index)
 
+
+class ExcludeExamples:
+    def __init__(self, exclusion_list:list, column:str) -> None:
+        self.exclusion_list = exclusion_list
+        self.column = column
+
+    def run(self, data):
+        return data[~data[self.column].isin(self.exclusion_list)]
