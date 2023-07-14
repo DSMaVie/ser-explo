@@ -66,7 +66,7 @@ class UtteranceLevelDecisionJob(Job):
 
             for metric_name, res in metric.calc().items():
                 # if metric_name != "beer_total" and metric_name.startswith("beer"):
-                #     breakpoint()
+                # breakpoint()
                 results.append(
                     {
                         "split": split.name.lower(),
@@ -76,6 +76,7 @@ class UtteranceLevelDecisionJob(Job):
                 )
             metric.reset()
 
+        # breakpoint()
         results = pd.DataFrame.from_records(results)
         # results = results.pivot(index="metric", columns="split", values="value")
         logger.info(f"got results {results.to_string()}")
@@ -149,15 +150,19 @@ class SequenceLevelDecisionJob(Job):
 
 
         dec_frame = pd.DataFrame.from_records(dec_list)
-        dec_frame = self.decide(dec_frame)
 
-        logger.info(f"got decisisons {dec_frame.head().to_string()}")
-        dec_frame.to_csv(Path(self.decisions) / "decisions.csv")
+        pers = self.calc_per(dec_frame)
+
+        emo_dec_frame = self.decide(dec_frame)
+
+
+        logger.info(f"got decisisons {emo_dec_frame.head().to_string()}")
+        emo_dec_frame.to_csv(Path(self.decisions) / "decisions.csv")
 
         # compute_metrics
-        results = []
+        results = pers
         for split in Split:
-            dec = dec_frame.query(f"split == {split.name.lower()!r}")
+            dec = emo_dec_frame.query(f"split == {split.name.lower()!r}")
 
             result = self.calculate_metrics(dec)
             results.extend(result)

@@ -47,7 +47,7 @@ class LogMelSpec(FeatureExtractor):
 
 
 class NormalizedRawAudio(FeatureExtractor):
-    def __init__(self, resample_to: int | None = None, use_znorm: bool = False) -> None:
+    def __init__(self, resample_to: int | None = None, use_znorm: bool = True) -> None:
         super().__init__()
 
         self.resample_to = resample_to

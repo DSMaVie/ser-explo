@@ -11,7 +11,8 @@ from transformers.trainer_utils import get_last_checkpoint
 
 from erinyes.data.hdf_dataset import Hdf5Dataset
 from erinyes.data.loader import pad_collate
-from erinyes.inference.metrics import BalancedEmotionErrorRate, EmotionErrorRate
+from erinyes.inference.metrics import (BalancedEmotionErrorRate,
+                                       EmotionErrorRate)
 from erinyes.inference.metrics_tracker import InTrainingsMetricsTracker
 from erinyes.models.classifier import HFPooledSeqClassifier
 from erinyes.util.enums import Split
@@ -73,19 +74,18 @@ class LJFETrainingJob(Job):
         train_args = TrainingArguments(
             output_dir=self.out_path.get_path(),
             do_train=True,
-            num_train_epochs=500,
+            num_train_epochs=150,
             gradient_checkpointing=True,
             per_device_train_batch_size=2,
             per_device_eval_batch_size=2,
             gradient_accumulation_steps=16,
-            save_steps=200,
-            logging_steps=200,
-            eval_steps=200,
+            save_steps=100,
+            logging_steps=50,
+            eval_steps=100,
             evaluation_strategy="steps",
-            # lr_scheduler_type="constant_with_warmup",
-            learning_rate=1e-5,
+            learning_rate=0.001,
             weight_decay=0.005,
-            warmup_steps=1000,
+            warmup_steps=500,
             dataloader_num_workers=self.rqmts.get("cpu", 0),
             report_to="tensorboard",
             overwrite_output_dir=True,
@@ -146,38 +146,10 @@ class LJFETrainingJob(Job):
             # first trainer pass
 
             # logger.info(f"found cp {checkpoint}")
-            first_step_result = trainer.train()
+            trainer.train()
             trainer.save_model()  # Saves the tokenizer too for easy upload
             trainer.save_state()
-            # cp = train_args.output_dir
 
-            # # second trainer pass
-            # ## unlock grads
-            # for param in model.encoder.parameters():
-            #     param.requires_grad = True
-
-            # ## change args
-            # train_args.num_train_epochs = int(train_args.num_train_epochs * 1.5)
-            # train_args.lr_scheduler_type = "constant"
-            # train_args.warmup_steps = 0
-
-            # ## harmonize lr
-            # train_args.learning_rate = first_step_result.training_loss
-            # train_args.warmup_steps = 0
-
-            # ## reload objects
-
-            # trainer = Trainer(
-            #     model=model,
-            #     args=train_args,
-            #     train_dataset=train_data,
-            #     eval_dataset=eval_data,
-            #     data_collator=partial(
-            #         pad_collate, padding_token_id=0, return_attention_mask=False
-            #     ),
-            #     compute_metrics=self.met_track,
-            # )
-            # trainer.train(resume_from_checkpoint=cp)
 
     def resume(self):
         self.train_args.resume_from_checkpoint = True

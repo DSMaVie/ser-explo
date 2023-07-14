@@ -6,6 +6,9 @@ import numpy as np
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+from transformers import TrainerCallback
+from transformers.trainer_callback import TrainerControl, TrainerState
+from transformers.training_args import TrainingArguments
 
 from erinyes.data.loader import get_data_loader
 from erinyes.train.trainer import Trainer
@@ -143,3 +146,41 @@ class TrackVRAMUsage:
     def after_step(self, _):
         gpu_ut = return_gpu_utilization()
         logger.info(f"{gpu_ut:.2f}MB currently used on VRAM.")
+
+
+class HFFreezeUnfreezeCallback(TrainerCallback):
+    def __init__(self, unfreeze_after_step: int):
+        self.trigger_step = unfreeze_after_step
+        self.has_been_unfrozen = False
+
+    def on_init_end(
+        self,
+        args: TrainingArguments,
+        state: TrainerState,
+        control: TrainerControl,
+        **kwargs,
+    ):
+        for param in kwargs["model"].wav2vec2.parameters():
+            param.requires_grad = False
+
+        logger.info("Base Model has been frozen for training at start")
+
+        return super().on_init_end(args, state, control, **kwargs)
+
+    def on_step_end(
+        self,
+        args: TrainingArguments,
+        state: TrainerState,
+        control: TrainerControl,
+        **kwargs,
+    ):
+        if not self.has_been_unfrozen:
+            if state.global_step >= self.trigger_step:
+                for param in kwargs["model"].wav2vec2.parameters():
+                    param.requires_grad = True
+
+                kwargs["model"].freeze_feature_encoder()
+                self.has_been_unfrozen = True
+                logger.info("base model has been unfrozen!")
+
+        return super().on_step_end(args, state, control, **kwargs)

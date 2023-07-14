@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import itertools
+
 import numpy as np
 import pandas as pd
 import torch
 
-from erinyes.inference.metrics import BalancedEmotionErrorRate, EmotionErrorRate
+from erinyes.inference.metrics import (
+    BalancedEmotionErrorRate,
+    EmotionErrorRate,
+    calculate_wer,
+)
 
 from .base import SequenceLevelDecisionJob
 
@@ -36,7 +42,6 @@ class ArgMaxSeqDecision(SequenceLevelDecisionJob):
             .agg({"emotion": pd.Series.mode, "split": "first"})
             .reset_index()
         )
-        # breakpoint()
         # shuffle and drop duplicates for random select of duplicates
         decisions = (
             decisions.explode("emotion")
@@ -47,9 +52,32 @@ class ArgMaxSeqDecision(SequenceLevelDecisionJob):
 
         return decisions
 
+    def calc_per(self, dec_frame: pd.DataFrame) -> pd.DataFrame:
+        pers = {"test": [], "train": [], "val": []}
+
+        groups = dec_frame.drop(columns="emotion").groupby(["split", "idx"])
+        for (split, idx), group in groups:
+            g = group.sort_values("position")
+
+            preds = g.query("type == 'pred'").phoneme.values
+            preds = [
+                i for i, _ in itertools.groupby(preds) if i != "<pad>"
+            ]  # ctc reduction
+            trues = g.query("type == 'true'").phoneme.values.tolist()
+
+            per = calculate_wer(trues, preds)
+            pers[split].append(per)
+
+        results = []
+        for split, perr_vals in pers.items():
+            results.append({"split": split, "metric": "per", "value": np.mean(perr_vals)})
+
+        return results
+
     def calculate_metrics(
         self, dec_frame: pd.DataFrame
     ) -> list[dict[str, str | float]]:
+        # breakpoint()
         split = dec_frame.split.iloc[0]
         # breakpoint()
         dec_frame_pivot = dec_frame.pivot(index="idx", columns="type", values="emotion")

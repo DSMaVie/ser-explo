@@ -14,6 +14,7 @@ from transformers import (
 from erinyes.data.hdf_dataset import Hdf5Dataset
 from erinyes.data.loader import pad_collate
 from erinyes.inference.metrics import BalancedEmotionErrorRate, EmotionErrorRate
+from erinyes.train.callbacks import HFFreezeUnfreezeCallback
 
 # from erinyes.inference.metrics_tracker import InTrainingsMetricsTracker
 from erinyes.util.enums import Split
@@ -72,7 +73,7 @@ class HFSeq2SeqTrainingJob(Job):
             gradient_checkpointing=True,
             evaluation_strategy="steps",
             learning_rate=5e-5,
-            max_steps=10_000,
+            max_steps=15_000,
             per_device_train_batch_size=2,
             per_device_eval_batch_size=2,
             gradient_accumulation_steps=16,
@@ -104,6 +105,7 @@ class HFSeq2SeqTrainingJob(Job):
             train_dataset=train_data,
             eval_dataset=eval_data,
             # compute_metrics=self.met_track,
+            callbacks=[HFFreezeUnfreezeCallback(10_000)],
             data_collator=partial(
                 pad_collate,
                 return_attention_mask=True,
@@ -142,45 +144,11 @@ class HFSeq2SeqTrainingJob(Job):
             # elif last_checkpoint is not Nqone:
             #     checkpoint = last_checkpoint
 
-            # first trainer pass
-            for param in model.wav2vec2.parameters():
-                param.requires_grad = False
 
             # logger.info(f"found cp {checkpoint}")
-            first_step_result = trainer.train()
             trainer.save_model()  # Saves the tokenizer too for easy upload
             trainer.save_state()
-            cp = train_args.output_dir
 
-            # second trainer pass
-            for param in model.wav2vec2.parameters():
-                param.requires_grad = True
-            model.freeze_feature_encoder()
-
-            train_args.load_best_model_at_end = True
-            train_args.metric_for_best_model = "eval_loss"
-            train_args.max_steps = 15_000
-
-            train_args.learning_rate = first_step_result.training_loss
-            train_args.warmup_steps = 0
-            train_args.lor_scheduler_type = "constant"
-
-            ## reload objects
-
-            trainer = Seq2SeqTrainer(
-                model=model,
-                args=train_args,
-                train_dataset=train_data,
-                eval_dataset=eval_data,
-                # compute_metrics=self.met_track,
-                data_collator=partial(
-                    pad_collate,
-                    return_attention_mask=True,
-                    labels_are_seqs=True,
-                    padding_token_id=config.pad_token_id,
-                ),
-            )
-            trainer.train(resume_from_checkpoint=cp)
 
     def resume(self):
         self.train_args.resume_from_checkpoint = True

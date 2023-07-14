@@ -77,7 +77,7 @@ class LJFTTrainingJob(Job):
         train_args = TrainingArguments(
             output_dir=self.out_path.get_path(),
             do_train=True,
-            num_train_epochs=15,
+            num_train_epochs=20,
             gradient_checkpointing=True,
             per_device_train_batch_size=2,
             per_device_eval_batch_size=2,
@@ -86,7 +86,7 @@ class LJFTTrainingJob(Job):
             logging_steps=4,
             eval_steps=20,
             evaluation_strategy="steps",
-            learning_rate=1e-5,
+            learning_rate=0.001,
             weight_decay=0.005,
             warmup_steps=50,
             dataloader_num_workers=self.rqmts.get("cpu", 0),
@@ -155,30 +155,7 @@ class LJFTTrainingJob(Job):
             trainer.save_model()  # Saves the tokenizer too for easy upload
             trainer.save_state()
 
-            # second trainer pass
 
-            cp = train_args.output_dir
-
-            ## setup leading from best eval_loss
-            train_args.load_best_model_at_end = True
-            train_args.metric_for_best_model = "eval_loss"
-            train_args.num_train_epochs = int(train_args.num_train_epochs * 2)
-
-            ## harmonize lr
-            train_args.learning_rate = first_step_result.training_loss
-            train_args.warmup_steps = 0
-
-            trainer = Trainer(
-                model=model,
-                args=train_args,
-                train_dataset=train_data,
-                eval_dataset=eval_data,
-                data_collator=partial(
-                    pad_collate, return_attention_mask=True, padding_token_id=0
-                ),
-                compute_metrics=self.met_track,
-            )
-            trainer.train(resume_from_checkpoint=cp)
 
     def tasks(self):
         if self.profile_first:

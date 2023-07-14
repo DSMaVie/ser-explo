@@ -75,3 +75,14 @@ class BalancedEmotionErrorRate(Metric):
             beers.update(total)
             return beers
         return total
+
+def calculate_wer(reference: list[str], hypothesis:list[str]):
+	# Counting the number of substitutions, deletions, and insertions
+	substitutions = sum(1 for ref, hyp in zip(reference, hypothesis) if ref != hyp)
+	deletions = len(reference) - len(hypothesis)
+	insertions = len(hypothesis) - len(reference)
+	# Total number of words in the reference text
+	total_words = len(reference)
+	# Calculating the Word Error Rate (WER)
+	wer = (substitutions + deletions + insertions) / total_words
+	return wer
