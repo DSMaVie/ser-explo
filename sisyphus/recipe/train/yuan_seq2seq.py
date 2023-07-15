@@ -114,41 +114,11 @@ class HFSeq2SeqTrainingJob(Job):
             ),
         )
 
-        # last_checkpoint = None
-        # if (
-        #     os.path.isdir(train_args.output_dir)
-        #     and train_args.do_train
-        #     and not train_args.overwrite_output_dir
-        # ):
-        #     last_checkpoint = get_last_checkpoint(train_args.output_dir)
-        #     if last_checkpoint is None and len(os.listdir(train_args.output_dir)) > 0:
-        #         raise ValueError(
-        #             f"Output directory ({train_args.output_dir}) already exists and is not empty. "
-        #             "Use --overwrite_output_dir to overcome."
-        #         )
-        #     elif (
-        #         last_checkpoint is not None
-        #         and train_args.resume_from_checkpoint is None
-        #     ):
-        #         logger.info(
-        #             f"Checkpoint detected, resuming training at {last_checkpoint}. To avoid this behavior, change "
-        #             "the `--output_dir` or add `--overwrite_output_dir` to train from scratch."
-        #         )
-        # logger.info(f"last checkpoint is {last_checkpoint}")
-
         # Training
         if train_args.do_train:
-            # checkpoint = None
-            # if train_args.resume_from_checkpoint is not None:
-            #     checkpoint = train_args.resume_from_checkpoint
-            # elif last_checkpoint is not Nqone:
-            #     checkpoint = last_checkpoint
-
-
-            # logger.info(f"found cp {checkpoint}")
+            trainer.train()
             trainer.save_model()  # Saves the tokenizer too for easy upload
             trainer.save_state()
-
 
     def resume(self):
         self.train_args.resume_from_checkpoint = True
